@@ -11,6 +11,17 @@ describe('App', () => {
     { id: 2, name: 'Item 2' }
   ];
 
+  // Mock console.error to suppress expected error logs during testing
+  const originalConsoleError = console.error;
+  
+  beforeAll(() => {
+    console.error = jest.fn();
+  });
+
+  afterAll(() => {
+    console.error = originalConsoleError;
+  });
+
   beforeEach(() => {
     // Reset all mocks before each test
     jest.resetAllMocks();
