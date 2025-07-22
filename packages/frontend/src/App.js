@@ -1,5 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableContainer, 
+  TableHead, 
+  TableRow, 
+  Paper,
+  Button
+} from '@mui/material';
 
 function App() {
   const [data, setData] = useState([]);
@@ -100,26 +110,34 @@ function App() {
           {error && <p className="error">{error}</p>}
           {!loading && !error && (
             data.length > 0 ? (
-              <table className="items-table">
-                <thead>
-                  <tr>
-                    <th>Item Name</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.map((item) => (
-                    <tr key={item.id}>
-                      <td>{item.name}</td>
-                      <td>
-                        <button onClick={() => handleDelete(item.id)} className="delete-button">
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <TableContainer component={Paper}>
+                <Table aria-label="items table">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Item Name</TableCell>
+                      <TableCell align="right">Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {data.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell component="th" scope="row">
+                          {item.name}
+                        </TableCell>
+                        <TableCell align="right">
+                          <Button 
+                            variant="contained" 
+                            color="error" 
+                            onClick={() => handleDelete(item.id)}
+                          >
+                            Delete
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
             ) : (
               <p>No items found. Add some!</p>
             )
