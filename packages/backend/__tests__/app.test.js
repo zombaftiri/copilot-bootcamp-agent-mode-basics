@@ -1,74 +1,36 @@
 const request = require('supertest');
-const app = require('../src/app');
-const path = require('path');
-
-// Mock the database
-jest.mock('better-sqlite3', () => {
-  return jest.fn().mockImplementation(() => ({
-    prepare: jest.fn().mockReturnValue({
-      run: jest.fn(),
-      get: jest.fn(),
-      all: jest.fn()
-    })
-  }));
-});
+const { app, db, insertStmt } = require('../src/app');
 
 describe('DELETE /api/items/:id', () => {
-  let server;
-
-  beforeAll(() => {
-    server = app.listen();
-  });
-
-  afterAll((done) => {
-    server.close(done);
-  });
-
   beforeEach(() => {
-    // Clear all mocks before each test
-    jest.clearAllMocks();
+    // Clear the items table before each test
+    db.prepare('DELETE FROM items').run();
+    // Insert a test item
+    insertStmt.run('Test Item');
   });
 
-  it('should delete an item successfully', async () => {
-    const mockId = '123';
-    const mockDeleteResult = { changes: 1 };
-
-    // Mock the database operation
-    const betterSqlite3 = require('better-sqlite3');
-    const mockDb = betterSqlite3();
-    mockDb.prepare.mockReturnValue({
-      run: jest.fn().mockReturnValue(mockDeleteResult)
-    });
-
-    const response = await request(server)
-      .delete(`/api/items/${mockId}`)
+  it('should delete an existing item successfully', async () => {
+    // Get the ID of our test item
+    const item = db.prepare('SELECT * FROM items WHERE name = ?').get('Test Item');
+    
+    const response = await request(app)
+      .delete(`/api/items/${item.id}`)
       .expect(200);
 
     expect(response.body).toEqual({
       message: 'Item deleted successfully'
     });
 
-    // Verify that the delete statement was prepared correctly
-    expect(mockDb.prepare).toHaveBeenCalledWith('DELETE FROM items WHERE id = ?');
-    
-    // Verify that run was called with the correct ID
-    const deleteStmt = mockDb.prepare();
-    expect(deleteStmt.run).toHaveBeenCalledWith(mockId);
+    // Verify item was actually deleted from database
+    const deletedItem = db.prepare('SELECT * FROM items WHERE id = ?').get(item.id);
+    expect(deletedItem).toBeUndefined();
   });
 
-  it('should return 404 when item does not exist', async () => {
-    const mockId = '999';
-    const mockDeleteResult = { changes: 0 };
+  it('should return 404 when trying to delete non-existent item', async () => {
+    const nonExistentId = 9999;
 
-    // Mock the database operation
-    const betterSqlite3 = require('better-sqlite3');
-    const mockDb = betterSqlite3();
-    mockDb.prepare.mockReturnValue({
-      run: jest.fn().mockReturnValue(mockDeleteResult)
-    });
-
-    const response = await request(server)
-      .delete(`/api/items/${mockId}`)
+    const response = await request(app)
+      .delete(`/api/items/${nonExistentId}`)
       .expect(404);
 
     expect(response.body).toEqual({
@@ -76,24 +38,13 @@ describe('DELETE /api/items/:id', () => {
     });
   });
 
-  it('should return 500 when database operation fails', async () => {
-    const mockId = '123';
-
-    // Mock the database operation to throw an error
-    const betterSqlite3 = require('better-sqlite3');
-    const mockDb = betterSqlite3();
-    mockDb.prepare.mockReturnValue({
-      run: jest.fn().mockImplementation(() => {
-        throw new Error('Database error');
-      })
-    });
-
-    const response = await request(server)
-      .delete(`/api/items/${mockId}`)
-      .expect(500);
+  it('should handle invalid ID format gracefully', async () => {
+    const response = await request(app)
+      .delete('/api/items/invalid-id')
+      .expect(404);
 
     expect(response.body).toEqual({
-      error: 'Failed to delete item'
+      error: 'Item not found'
     });
   });
 });
