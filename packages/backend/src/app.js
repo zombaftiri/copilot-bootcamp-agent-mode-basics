@@ -3,25 +3,29 @@ const cors = require('cors');
 const morgan = require('morgan');
 const Database = require('better-sqlite3');
 
-// Initialize express app
-const app = express();
+// Function to create app with optional test database
+const createApp = (testDb = null) => {
+  // Initialize express app
+  const app = express();
 
-// Middleware
-app.use(cors());
-app.use(express.json());
-app.use(morgan('dev'));
+  // Middleware
+  app.use(cors());
+  app.use(express.json());
+  app.use(morgan('dev'));
 
-// Initialize in-memory SQLite database
-const db = new Database(':memory:');
+  // Use provided test database or create new one
+  const db = testDb || new Database(':memory:');
 
-// Create tables
-db.exec(`
-  CREATE TABLE IF NOT EXISTS items (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-  )
-`);
+  if (!testDb) {
+    // Create tables only if using new database
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+  }
 
 // Insert some initial data
 const initialItems = ['Item 1', 'Item 2', 'Item 3'];
@@ -91,4 +95,7 @@ app.delete('/api/items/:id', (req, res) => {
   }
 });
 
-module.exports = { app, db, insertStmt };
+  return { app, db };
+};
+
+module.exports = createApp;
