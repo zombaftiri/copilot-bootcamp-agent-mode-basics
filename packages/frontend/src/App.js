@@ -65,7 +65,7 @@ function App() {
         throw new Error('Failed to delete item');
       }
 
-      setData(data.filter(item => item.id !== id));
+      setData(data.filter((item) => item.id !== id));
       setError(null);
     } catch (err) {
       setError('Error deleting item: ' + err.message);
@@ -79,7 +79,7 @@ function App() {
         <h1>Hello World</h1>
         <p>Connected to in-memory database</p>
       </header>
-      
+
       <main>
         <section className="add-item-section">
           <h2>Add New Item</h2>
@@ -104,10 +104,7 @@ function App() {
                 data.map((item) => (
                   <li key={item.id}>
                     <span>{item.name}</span>
-                    <button 
-                      onClick={() => handleDelete(item.id)}
-                      className="delete-button"
-                    >
+                    <button onClick={() => handleDelete(item.id)} className="delete-button">
                       Delete
                     </button>
                   </li>
