@@ -5,16 +5,21 @@ describe('DELETE /api/items/:id', () => {
   beforeEach(() => {
     // Clear the items table before each test
     db.prepare('DELETE FROM items').run();
-    // Insert a test item
-    insertStmt.run('Test Item');
   });
 
-  it('should delete an existing item successfully', async () => {
-    // Get the ID of our test item
-    const item = db.prepare('SELECT * FROM items WHERE name = ?').get('Test Item');
+  const insertItemWithDate = (name, daysAgo) => {
+    const date = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000);
+    return db.prepare('INSERT INTO items (name, created_at) VALUES (?, ?)')
+      .run(name, date.toISOString());
+  };
+
+  it('should delete an item that is older than 5 days', async () => {
+    // Insert item that's 6 days old
+    const result = insertItemWithDate('Old Item', 6);
+    const itemId = result.lastInsertRowid;
     
     const response = await request(app)
-      .delete(`/api/items/${item.id}`)
+      .delete(`/api/items/${itemId}`)
       .expect(200);
 
     expect(response.body).toEqual({
@@ -22,8 +27,27 @@ describe('DELETE /api/items/:id', () => {
     });
 
     // Verify item was actually deleted from database
-    const deletedItem = db.prepare('SELECT * FROM items WHERE id = ?').get(item.id);
+    const deletedItem = db.prepare('SELECT * FROM items WHERE id = ?').get(itemId);
     expect(deletedItem).toBeUndefined();
+  });
+
+  it('should not allow deleting items less than 5 days old', async () => {
+    // Insert item that's 3 days old
+    const result = insertItemWithDate('Recent Item', 3);
+    const itemId = result.lastInsertRowid;
+
+    const response = await request(app)
+      .delete(`/api/items/${itemId}`)
+      .expect(403);
+
+    expect(response.body).toEqual({
+      error: 'Items can only be deleted after 5 days'
+    });
+
+    // Verify item still exists in database
+    const item = db.prepare('SELECT * FROM items WHERE id = ?').get(itemId);
+    expect(item).toBeDefined();
+    expect(item.name).toBe('Recent Item');
   });
 
   it('should return 404 when trying to delete non-existent item', async () => {
