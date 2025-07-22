@@ -1,8 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import App from '../App';
-import request from 'supertest';
-import app from '../app';
 
 // Mock fetch globally
 global.fetch = jest.fn();
@@ -35,7 +33,7 @@ describe('App', () => {
       global.fetch.mockImplementation(() => new Promise(() => {}));
       
       render(<App />);
-      expect(screen.getByRole('status')).toBeInTheDocument();
+      expect(screen.getByText('Loading data...')).toBeInTheDocument();
     });
 
     it('should show error message when fetch fails', async () => {
@@ -88,7 +86,7 @@ describe('App', () => {
       // Fill and submit the form
       const input = screen.getByRole('textbox');
       fireEvent.change(input, { target: { value: 'New Item' } });
-      fireEvent.submit(screen.getByRole('form'));
+      fireEvent.click(screen.getByRole('button', { name: 'Add Item' }));
 
       // Verify new item is added
       await waitFor(() => {
@@ -108,145 +106,43 @@ describe('App', () => {
             statusText: 'Internal Server Error'
           });
         }
-        // File: packages/backend/src/__tests__/api.test.js
+        if (url === '/api/items') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(mockItems)
+          });
+        }
+        return Promise.reject(new Error('Not found'));
+      });
 
-
-        describe('Items API', () => {
-            let testItems = [];
-
-            beforeEach(() => {
-                // Reset test data before each test
-                testItems = [
-                    { id: 1, name: 'Test Item 1' },
-                    { id: 2, name: 'Test Item 2' }
-                ];
-            });
-
-            describe('GET /api/items', () => {
-                it('should return all items', async () => {
-                    const response = await request(app)
-                        .get('/api/items')
-                        .expect(200);
-
-                    expect(response.body).toBeInstanceOf(Array);
-                    expect(response.body).toHaveLength(testItems.length);
-                    expect(response.body[0]).toHaveProperty('id');
-                    expect(response.body[0]).toHaveProperty('name'); 
-                });
-
-                it('should handle errors when retrieving items fails', async () => {
-                    // Mock DB error
-                    const mockError = new Error('Database error');
-                    jest.spyOn(global, 'fetch').mockRejectedValueOnce(mockError);
-
-                    const response = await request(app)
-                        .get('/api/items')
-                        .expect(500);
-
-                    expect(response.body).toHaveProperty('error');
-                });
-            });
-
-            describe('POST /api/items', () => {
-                it('should create new item with valid data', async () => {
-                    const newItem = { name: 'New Test Item' };
-
-                    const response = await request(app)
-                        .post('/api/items')
-                        .send(newItem)
-                        .expect(201);
-
-                    expect(response.body).toHaveProperty('id');
-                    expect(response.body.name).toBe(newItem.name);
-                });
-
-                it('should reject invalid item data', async () => {
-                    const invalidItem = { invalidField: 'test' };
-
-                    const response = await request(app)
-                        .post('/api/items')
-                        .send(invalidItem)
-                        .expect(400);
-
-                    expect(response.body).toHaveProperty('error');
-                });
-
-                it('should handle empty item name', async () => {
-                    const emptyItem = { name: '' };
-
-                    const response = await request(app)
-                        .post('/api/items')
-                        .send(emptyItem)
-                        .expect(400);
-
-                    expect(response.body).toHaveProperty('error');
-                });
-            });
-
-            describe('DELETE /api/items/:id', () => {
-                it('should delete existing item', async () => {
-                    await request(app)
-                        .delete('/api/items/1')
-                        .expect(200);
-
-                    // Verify item was deleted
-                    const response = await request(app)
-                        .get('/api/items');
-                        
-                    expect(response.body.find(item => item.id === 1)).toBeUndefined();
-                });
-
-                it('should return 404 for non-existent item', async () => {
-                    await request(app)
-                        .delete('/api/items/999')
-                        .expect(404);
-                });
-
-                it('should handle invalid id parameter', async () => {
-                    await request(app)
-                        .delete('/api/items/invalid')
-                        .expect(400);
-                });
-
-                it('should handle database errors during deletion', async () => {
-                    // Mock DB error
-                    const mockError = new Error('Database error');
-                    jest.spyOn(global, 'fetch').mockRejectedValueOnce(mockError);
-
-                    await request(app)
-                        .delete('/api/items/1')
-                        .expect(500);
-                });
-            });
-
-            describe('API error handling', () => {
-                it('should handle unexpected server errors', async () => {
-                    // Mock unhandled error
-                    const mockError = new Error('Unexpected error');
-                    jest.spyOn(global, 'fetch').mockRejectedValueOnce(mockError);
-
-                    const response = await request(app)
-                        .get('/api/items')
-                        .expect(500);
-
-                    expect(response.body).toHaveProperty('error');
-                });
-
-                it('should handle malformed JSON requests', async () => {
-                    await request(app)
-                        .post('/api/items')
-                        .send('invalid json{')
-                        .set('Content-Type', 'application/json')
-                        .expect(400);
-                });
-
-                it('should return 404 for undefined routes', async () => {
-                    await request(app)
-                        .get('/api/undefined-route')
-                        .expect(404);
-                });
-            });
-        });
+      render(<App />);
+      
+      // Wait for initial load
+      await waitFor(() => {
+        expect(screen.getByText('Item 1')).toBeInTheDocument();
+      });
+      
+      // Fill and submit the form
+      const input = screen.getByRole('textbox');
+      fireEvent.change(input, { target: { value: 'New Item' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add Item' }));
+      
+      // Verify error message appears
+      await waitFor(() => {
+        expect(screen.getByText(/error adding item: failed to add item/i)).toBeInTheDocument();
+      });
+    });
+  });
+  describe('delete functionality', () => {
+    it('should delete item when delete button is clicked', async () => {
+      global.fetch.mockImplementation((url, options) => {
+        if (url === '/api/items' && !options) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(mockItems)
+          });
+        }
+        if (url === '/api/items/1' && options?.method === 'DELETE') {
           return Promise.resolve({ ok: true });
         }
         return Promise.reject(new Error('Not found'));
