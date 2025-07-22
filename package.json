@@ -16,8 +16,12 @@
     "install:all": "npm install && npm run install:frontend && npm run install:backend",
     "install:frontend": "cd packages/frontend && npm install",
     "install:backend": "cd packages/backend && npm install",
-    "lint": "eslint . --ext .js,.jsx",
-    "lint:fix": "eslint . --ext .js,.jsx --fix",
+    "lint": "npm run lint:frontend && npm run lint:backend",
+    "lint:fix": "npm run lint:fix:frontend && npm run lint:fix:backend",
+    "lint:frontend": "cd packages/frontend && eslint . --ext .js,.jsx",
+    "lint:backend": "cd packages/backend && eslint . --ext .js,.jsx",
+    "lint:fix:frontend": "cd packages/frontend && eslint . --ext .js,.jsx --fix",
+    "lint:fix:backend": "cd packages/backend && eslint . --ext .js,.jsx --fix",
     "format": "prettier --write \"**/*.{js,jsx,json,md}\""
   },
   "devDependencies": {
