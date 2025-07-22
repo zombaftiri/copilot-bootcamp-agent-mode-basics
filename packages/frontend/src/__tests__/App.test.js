@@ -14,7 +14,7 @@ describe('App', () => {
   beforeEach(() => {
     // Reset all mocks before each test
     jest.resetAllMocks();
-    
+
     // Mock the initial data fetch
     global.fetch.mockImplementation((url) => {
       if (url === '/api/items') {
@@ -30,19 +30,19 @@ describe('App', () => {
   describe('initial load', () => {
     it('should show loading state while fetching data', () => {
       // Mock fetch to delay response
-      global.fetch.mockImplementation(() => new Promise(() => {}));
-      
+      global.fetch.mockImplementation(() => new Promise(() => { }));
+
       render(<App />);
       expect(screen.getByText('Loading data...')).toBeInTheDocument();
     });
 
     it('should show error message when fetch fails', async () => {
-      global.fetch.mockImplementation(() => 
+      global.fetch.mockImplementation(() =>
         Promise.reject(new Error('Network error'))
       );
 
       render(<App />);
-      
+
       await waitFor(() => {
         expect(screen.getByText(/failed to fetch data/i)).toBeInTheDocument();
       });
@@ -62,7 +62,7 @@ describe('App', () => {
   describe('add item functionality', () => {
     it('should add a new item when form is submitted', async () => {
       const newItem = { id: 3, name: 'New Item' };
-      
+
       global.fetch.mockImplementation((url, options) => {
         if (url === '/api/items' && options?.method === 'POST') {
           return Promise.resolve({
@@ -116,17 +116,17 @@ describe('App', () => {
       });
 
       render(<App />);
-      
+
       // Wait for initial load
       await waitFor(() => {
         expect(screen.getByText('Item 1')).toBeInTheDocument();
       });
-      
+
       // Fill and submit the form
       const input = screen.getByRole('textbox');
       fireEvent.change(input, { target: { value: 'New Item' } });
       fireEvent.click(screen.getByRole('button', { name: 'Add Item' }));
-      
+
       // Verify error message appears
       await waitFor(() => {
         expect(screen.getByText(/error adding item: failed to add item/i)).toBeInTheDocument();
