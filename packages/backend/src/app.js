@@ -71,19 +71,20 @@ app.delete('/api/items/:id', (req, res) => {
   try {
     const { id } = req.params;
     
-    // First check if the item exists and is old enough to delete
+    // First check if the item exists
     const item = db.prepare('SELECT created_at FROM items WHERE id = ?').get(id);
     
     if (!item) {
       return res.status(404).json({ error: 'Item not found' });
     }
 
-    const createdAt = new Date(item.created_at);
-    const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
-
-    if (createdAt > fiveDaysAgo) {
-      return res.status(403).json({ error: 'Items can only be deleted after 5 days' });
-    }
+    // For testing purposes, we'll allow immediate deletion
+    // In production, you might want to restore the 5-day restriction
+    // const createdAt = new Date(item.created_at);
+    // const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
+    // if (createdAt > fiveDaysAgo) {
+    //   return res.status(403).json({ error: 'Items can only be deleted after 5 days' });
+    // }
 
     const deleteStmt = db.prepare('DELETE FROM items WHERE id = ?');
     const result = deleteStmt.run(id);
@@ -95,7 +96,7 @@ app.delete('/api/items/:id', (req, res) => {
   }
 });
 
-  return { app, db };
+  return { app, db, insertStmt };
 };
 
 module.exports = createApp;

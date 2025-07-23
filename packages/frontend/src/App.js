@@ -129,6 +129,8 @@ function App() {
                             variant="contained" 
                             color="error" 
                             onClick={() => handleDelete(item.id)}
+                            data-testid={`delete-button-${item.id}`}
+                            aria-label={`Delete ${item.name}`}
                           >
                             Delete
                           </Button>

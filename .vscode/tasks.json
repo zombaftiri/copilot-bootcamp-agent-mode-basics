@@ -1,0 +1,14 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run E2E Tests",
+			"type": "shell",
+			"command": "npx playwright test delete-final.spec.js --project=chromium",
+			"group": "test",
+			"isBackground": false,
+			"problemMatcher": [],
+			"args": []
+		}
+	]
+}

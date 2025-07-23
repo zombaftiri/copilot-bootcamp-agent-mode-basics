@@ -13,6 +13,9 @@
     "test": "npm run test:frontend && npm run test:backend",
     "test:frontend": "npm run test --workspace=frontend",
     "test:backend": "npm run test --workspace=backend",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:ui": "playwright test --ui",
     "install:all": "npm install && npm run install:frontend && npm run install:backend",
     "install:frontend": "cd packages/frontend && npm install",
     "install:backend": "cd packages/backend && npm install",
@@ -27,6 +30,7 @@
   "devDependencies": {
     "@babel/core": "^7.22.10",
     "@babel/eslint-parser": "^7.22.10",
+    "@playwright/test": "^1.54.1",
     "concurrently": "^8.2.2",
     "eslint": "^8.47.0",
     "eslint-config-prettier": "^9.0.0",
