@@ -548,4 +548,486 @@ describe('App', () => {
       });
     });
   });
+
+  describe('handleDelete Function Integration Tests', () => {
+    beforeEach(() => {
+      // Reset all mocks before each test
+      jest.resetAllMocks();
+    });
+
+    describe('State Management Integration', () => {
+      it('should update data state correctly when delete succeeds', async () => {
+        const testMockItems = [
+          { id: 1, name: 'Test Item 1', created_at: '2025-07-18T10:00:00Z' },
+          { id: 2, name: 'Test Item 2', created_at: '2025-07-19T10:00:00Z' },
+          { id: 3, name: 'Test Item 3', created_at: '2025-07-20T10:00:00Z' }
+        ];
+        
+        global.fetch = jest.fn((url, options) => {
+          if (url === '/api/items' && !options) {
+            return Promise.resolve({
+              ok: true,
+              json: () => Promise.resolve(testMockItems)
+            });
+          }
+          if (url === '/api/items/1' && options?.method === 'DELETE') {
+            return Promise.resolve({ ok: true });
+          }
+          return Promise.reject(new Error('Not found'));
+        });
+
+        render(<App />);
+
+        // Wait for initial data to load
+        await waitFor(() => {
+          expect(screen.getByText('Test Item 1')).toBeInTheDocument();
+          expect(screen.getByText('Test Item 2')).toBeInTheDocument();
+          expect(screen.getByText('Test Item 3')).toBeInTheDocument();
+        });
+
+        // Trigger handleDelete by clicking delete button
+        const deleteButtons = screen.getAllByText('Delete');
+        fireEvent.click(deleteButtons[0]);
+
+        // Verify state is updated - item is removed from data array
+        await waitFor(() => {
+          expect(screen.queryByText('Test Item 1')).not.toBeInTheDocument();
+          expect(screen.getByText('Test Item 2')).toBeInTheDocument();
+          expect(screen.getByText('Test Item 3')).toBeInTheDocument();
+        });
+
+        // Verify error state is cleared
+        expect(screen.queryByText(/error/i)).not.toBeInTheDocument();
+      });
+
+      it('should preserve data state when delete fails', async () => {
+        const testMockItems = [
+          { id: 1, name: 'Test Item 1', created_at: '2025-07-18T10:00:00Z' },
+          { id: 2, name: 'Test Item 2', created_at: '2025-07-19T10:00:00Z' }
+        ];
+        
+        global.fetch = jest.fn((url, options) => {
+          if (url === '/api/items' && !options) {
+            return Promise.resolve({
+              ok: true,
+              json: () => Promise.resolve(testMockItems)
+            });
+          }
+          if (url === '/api/items/1' && options?.method === 'DELETE') {
+            return Promise.resolve({
+              ok: false,
+              status: 500,
+              statusText: 'Internal Server Error'
+            });
+          }
+          return Promise.reject(new Error('Not found'));
+        });
+
+        render(<App />);
+
+        // Wait for initial data to load
+        await waitFor(() => {
+          expect(screen.getByText('Test Item 1')).toBeInTheDocument();
+          expect(screen.getByText('Test Item 2')).toBeInTheDocument();
+        });
+
+        // Trigger handleDelete
+        const deleteButtons = screen.getAllByText('Delete');
+        fireEvent.click(deleteButtons[0]);
+
+        // Verify error state is set and data is preserved
+        await waitFor(() => {
+          expect(screen.getByText(/Error deleting item: Failed to delete item/)).toBeInTheDocument();
+        });
+      });
+
+      it('should update error state correctly when delete throws exception', async () => {
+        const testMockItems = [
+          { id: 1, name: 'Test Item 1', created_at: '2025-07-18T10:00:00Z' },
+          { id: 2, name: 'Test Item 2', created_at: '2025-07-19T10:00:00Z' }
+        ];
+        
+        global.fetch = jest.fn((url, options) => {
+          if (url === '/api/items' && !options) {
+            return Promise.resolve({
+              ok: true,
+              json: () => Promise.resolve(testMockItems)
+            });
+          }
+          if (url === '/api/items/1' && options?.method === 'DELETE') {
+            throw new Error('Network timeout');
+          }
+          return Promise.reject(new Error('Not found'));
+        });
+
+        render(<App />);
+
+        // Wait for initial data to load
+        await waitFor(() => {
+          expect(screen.getByText('Test Item 1')).toBeInTheDocument();
+        });
+
+        // Trigger handleDelete
+        const deleteButtons = screen.getAllByText('Delete');
+        fireEvent.click(deleteButtons[0]);
+
+        // Verify error state is updated with the exception message
+        await waitFor(() => {
+          expect(screen.getByText(/Error deleting item: Network timeout/)).toBeInTheDocument();
+        });
+      });
+    });
+
+    describe('API Integration', () => {
+      it('should make correct DELETE request with proper URL and method', async () => {
+        const testMockItems = [
+          { id: 1, name: 'Test Item 1', created_at: '2025-07-18T10:00:00Z' }
+        ];
+        
+        global.fetch = jest.fn((url, options) => {
+          if (url === '/api/items' && !options) {
+            return Promise.resolve({
+              ok: true,
+              json: () => Promise.resolve(testMockItems)
+            });
+          }
+          if (url === '/api/items/1' && options?.method === 'DELETE') {
+            return Promise.resolve({ ok: true });
+          }
+          return Promise.reject(new Error('Not found'));
+        });
+
+        render(<App />);
+
+        // Wait for initial data to load
+        await waitFor(() => {
+          expect(screen.getByText('Test Item 1')).toBeInTheDocument();
+        });
+
+        // Trigger handleDelete
+        const deleteButton = screen.getByText('Delete');
+        fireEvent.click(deleteButton);
+
+        // Verify API call was made with correct parameters
+        await waitFor(() => {
+          expect(global.fetch).toHaveBeenCalledWith('/api/items/1', {
+            method: 'DELETE'
+          });
+        });
+      });
+
+      it('should handle different item IDs correctly', async () => {
+        const testMockItems = [
+          { id: 42, name: 'Special Item', created_at: '2025-07-18T10:00:00Z' },
+          { id: 999, name: 'Another Item', created_at: '2025-07-19T10:00:00Z' }
+        ];
+        
+        global.fetch = jest.fn((url, options) => {
+          if (url === '/api/items' && !options) {
+            return Promise.resolve({
+              ok: true,
+              json: () => Promise.resolve(testMockItems)
+            });
+          }
+          if (url === '/api/items/42' && options?.method === 'DELETE') {
+            return Promise.resolve({ ok: true });
+          }
+          if (url === '/api/items/999' && options?.method === 'DELETE') {
+            return Promise.resolve({ ok: true });
+          }
+          return Promise.reject(new Error('Not found'));
+        });
+
+        render(<App />);
+
+        // Wait for initial data to load
+        await waitFor(() => {
+          expect(screen.getByText('Special Item')).toBeInTheDocument();
+          expect(screen.getByText('Another Item')).toBeInTheDocument();
+        });
+
+        // Delete first item (ID 42)
+        const deleteButtons = screen.getAllByText('Delete');
+        fireEvent.click(deleteButtons[0]);
+
+        // Verify correct API call for first item
+        await waitFor(() => {
+          expect(global.fetch).toHaveBeenCalledWith('/api/items/42', {
+            method: 'DELETE'
+          });
+        });
+
+        // Delete second item (ID 999)
+        const remainingDeleteButtons = screen.getAllByText('Delete');
+        fireEvent.click(remainingDeleteButtons[0]);
+
+        // Verify correct API call for second item
+        await waitFor(() => {
+          expect(global.fetch).toHaveBeenCalledWith('/api/items/999', {
+            method: 'DELETE'
+          });
+        });
+      });
+
+      it('should handle response.ok false correctly', async () => {
+        const testMockItems = [
+          { id: 1, name: 'Test Item 1', created_at: '2025-07-18T10:00:00Z' }
+        ];
+        
+        global.fetch = jest.fn((url, options) => {
+          if (url === '/api/items' && !options) {
+            return Promise.resolve({
+              ok: true,
+              json: () => Promise.resolve(testMockItems)
+            });
+          }
+          if (url === '/api/items/1' && options?.method === 'DELETE') {
+            return Promise.resolve({
+              ok: false,
+              status: 403,
+              statusText: 'Forbidden'
+            });
+          }
+          return Promise.reject(new Error('Not found'));
+        });
+
+        render(<App />);
+
+        // Wait for initial data to load
+        await waitFor(() => {
+          expect(screen.getByText('Test Item 1')).toBeInTheDocument();
+        });
+
+        // Trigger handleDelete
+        const deleteButton = screen.getByText('Delete');
+        fireEvent.click(deleteButton);
+
+        // Verify handleDelete correctly throws error for non-ok response
+        await waitFor(() => {
+          expect(screen.getByText(/Error deleting item: Failed to delete item/)).toBeInTheDocument();
+        });
+      });
+    });
+
+    describe('Function Behavior Integration', () => {
+      it('should filter data array correctly for the right item ID', async () => {
+        const testMockItems = [
+          { id: 1, name: 'First Item', created_at: '2025-07-18T10:00:00Z' },
+          { id: 2, name: 'Second Item', created_at: '2025-07-19T10:00:00Z' },
+          { id: 3, name: 'Third Item', created_at: '2025-07-20T10:00:00Z' }
+        ];
+        
+        global.fetch = jest.fn((url, options) => {
+          if (url === '/api/items' && !options) {
+            return Promise.resolve({
+              ok: true,
+              json: () => Promise.resolve(testMockItems)
+            });
+          }
+          if (url === '/api/items/2' && options?.method === 'DELETE') {
+            return Promise.resolve({ ok: true });
+          }
+          return Promise.reject(new Error('Not found'));
+        });
+
+        render(<App />);
+
+        // Wait for initial data to load
+        await waitFor(() => {
+          expect(screen.getByText('First Item')).toBeInTheDocument();
+          expect(screen.getByText('Second Item')).toBeInTheDocument();
+          expect(screen.getByText('Third Item')).toBeInTheDocument();
+        });
+
+        // Delete the middle item (Second Item with ID 2)
+        const deleteButtons = screen.getAllByText('Delete');
+        fireEvent.click(deleteButtons[1]); // Second button for Second Item
+
+        // Verify only the correct item was removed
+        await waitFor(() => {
+          expect(screen.getByText('First Item')).toBeInTheDocument();
+          expect(screen.queryByText('Second Item')).not.toBeInTheDocument();
+          expect(screen.getByText('Third Item')).toBeInTheDocument();
+        });
+      });
+
+      it('should handle async operation correctly with proper await', async () => {
+        const testMockItems = [
+          { id: 1, name: 'Test Item 1', created_at: '2025-07-18T10:00:00Z' }
+        ];
+        let deletePromiseResolver;
+        
+        global.fetch = jest.fn((url, options) => {
+          if (url === '/api/items' && !options) {
+            return Promise.resolve({
+              ok: true,
+              json: () => Promise.resolve(testMockItems)
+            });
+          }
+          if (url === '/api/items/1' && options?.method === 'DELETE') {
+            return new Promise((resolve) => {
+              deletePromiseResolver = resolve;
+            });
+          }
+          return Promise.reject(new Error('Not found'));
+        });
+
+        render(<App />);
+
+        // Wait for initial data to load
+        await waitFor(() => {
+          expect(screen.getByText('Test Item 1')).toBeInTheDocument();
+        });
+
+        // Trigger handleDelete
+        const deleteButton = screen.getByText('Delete');
+        fireEvent.click(deleteButton);
+
+        // Verify that the item is still present (delete hasn't completed)
+        expect(screen.getByText('Test Item 1')).toBeInTheDocument();
+
+        // Resolve the delete promise
+        deletePromiseResolver({ ok: true });
+
+        // Now verify the item is removed
+        await waitFor(() => {
+          expect(screen.queryByText('Test Item 1')).not.toBeInTheDocument();
+        });
+      });
+
+      it('should properly reset error state on successful delete', async () => {
+        const testMockItems = [
+          { id: 1, name: 'Test Item 1', created_at: '2025-07-18T10:00:00Z' },
+          { id: 2, name: 'Test Item 2', created_at: '2025-07-19T10:00:00Z' }
+        ];
+        
+        global.fetch = jest.fn((url, options) => {
+          if (url === '/api/items' && !options) {
+            return Promise.resolve({
+              ok: true,
+              json: () => Promise.resolve(testMockItems)
+            });
+          }
+          if (url.includes('/api/items/') && options?.method === 'DELETE') {
+            return Promise.resolve({ ok: true });
+          }
+          return Promise.reject(new Error('Not found'));
+        });
+
+        render(<App />);
+
+        // Wait for initial data to load
+        await waitFor(() => {
+          expect(screen.getByText('Test Item 1')).toBeInTheDocument();
+        });
+
+        // Trigger successful delete
+        const deleteButtons = screen.getAllByText('Delete');
+        fireEvent.click(deleteButtons[0]);
+
+        // Verify successful delete and no error message
+        await waitFor(() => {
+          expect(screen.queryByText('Test Item 1')).not.toBeInTheDocument();
+          expect(screen.queryByText(/error/i)).not.toBeInTheDocument();
+        });
+
+        // Verify setError(null) was called by checking no error element is displayed
+        expect(screen.queryByText(/error deleting item/i)).not.toBeInTheDocument();
+      });
+    });
+
+    describe('Error Handling Integration', () => {
+      it('should preserve console.error logging on exceptions', async () => {
+        const testMockItems = [
+          { id: 1, name: 'Test Item 1', created_at: '2025-07-18T10:00:00Z' }
+        ];
+        
+        global.fetch = jest.fn((url, options) => {
+          if (url === '/api/items' && !options) {
+            return Promise.resolve({
+              ok: true,
+              json: () => Promise.resolve(testMockItems)
+            });
+          }
+          if (url === '/api/items/1' && options?.method === 'DELETE') {
+            throw new Error('Network error');
+          }
+          return Promise.reject(new Error('Not found'));
+        });
+
+        render(<App />);
+
+        // Wait for initial data to load
+        await waitFor(() => {
+          expect(screen.getByText('Test Item 1')).toBeInTheDocument();
+        });
+
+        // Trigger handleDelete
+        const deleteButton = screen.getByText('Delete');
+        fireEvent.click(deleteButton);
+
+        // Verify error handling
+        await waitFor(() => {
+          expect(screen.getByText(/Error deleting item: Network error/)).toBeInTheDocument();
+        });
+
+        // Verify console.error was called (our mock console.error is a jest function)
+        expect(console.error).toHaveBeenCalledWith('Error deleting item:', expect.any(Error));
+      });
+
+      it('should handle various HTTP error status codes correctly', async () => {
+        const testCases = [
+          { status: 400, statusText: 'Bad Request' },
+          { status: 403, statusText: 'Forbidden' },
+          { status: 404, statusText: 'Not Found' },
+          { status: 500, statusText: 'Internal Server Error' }
+        ];
+
+        for (const testCase of testCases) {
+          // Reset mocks for each test case
+          jest.resetAllMocks();
+          
+          const testMockItems = [
+            { id: 1, name: 'Test Item 1', created_at: '2025-07-18T10:00:00Z' }
+          ];
+          
+          global.fetch = jest.fn((url, options) => {
+            if (url === '/api/items' && !options) {
+              return Promise.resolve({
+                ok: true,
+                json: () => Promise.resolve(testMockItems)
+              });
+            }
+            if (url === '/api/items/1' && options?.method === 'DELETE') {
+              return Promise.resolve({
+                ok: false,
+                status: testCase.status,
+                statusText: testCase.statusText
+              });
+            }
+            return Promise.reject(new Error('Not found'));
+          });
+
+          const { unmount } = render(<App />);
+
+          // Wait for initial data to load
+          await waitFor(() => {
+            expect(screen.getByText('Test Item 1')).toBeInTheDocument();
+          });
+
+          // Trigger handleDelete
+          const deleteButton = screen.getByText('Delete');
+          fireEvent.click(deleteButton);
+
+          // Verify error handling for this status code
+          await waitFor(() => {
+            expect(screen.getByText(/Error deleting item: Failed to delete item/)).toBeInTheDocument();
+          });
+
+          // Clean up for next iteration
+          unmount();
+        }
+      });
+    });
+  });
 });
