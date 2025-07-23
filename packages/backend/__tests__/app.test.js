@@ -197,7 +197,7 @@ describe('DELETE /api/items/:id', () => {
     // Insert item that's 6 days old
     const result = insertItemWithDate('Old Item', 6);
     const itemId = result.lastInsertRowid;
-    
+
     const response = await request(app)
       .delete(`/api/items/${itemId}`)
       .expect(200);
