@@ -39,7 +39,7 @@ describe('App', () => {
   });
 
   describe('initial load', () => {
-    it('should show loading state while fetching data', () => {
+    it('should show load items while fetching data', () => {
       // Mock fetch to delay response
       global.fetch.mockImplementation(() => new Promise(() => { }));
 
@@ -59,7 +59,7 @@ describe('App', () => {
       });
     });
 
-    it('should display data when fetch succeeds', async () => {
+    it('should display items when fetch succeeds', async () => {
       render(<App />);
 
       await waitFor(() => {
