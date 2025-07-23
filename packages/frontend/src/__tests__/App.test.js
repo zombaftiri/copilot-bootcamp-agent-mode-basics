@@ -71,7 +71,7 @@ describe('App', () => {
   });
 
   describe('add item functionality', () => {
-    it('should add a new item when form is submitted', async () => {
+    it('should create a new item when form is submitted', async () => {
       const newItem = { id: 3, name: 'New Item' };
 
       global.fetch.mockImplementation((url, options) => {
