@@ -6,7 +6,12 @@ const createApp = require('../src/app');
 let db;
 let app;
 
+// Mock console.error to suppress expected error logs during testing
+const originalConsoleError = console.error;
+
 beforeAll(() => {
+  console.error = jest.fn();
+  
   db = new Database(':memory:');
   // Create tables
   db.exec(`
@@ -22,6 +27,8 @@ beforeAll(() => {
 });
 
 afterAll(() => {
+  console.error = originalConsoleError;
+  
   // Close database connection after all tests
   if (db.open) {
     db.close();
