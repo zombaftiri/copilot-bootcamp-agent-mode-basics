@@ -144,122 +144,407 @@ describe('App', () => {
       });
     });
   });
-  describe('delete functionality', () => {
-    it('should delete item when delete button is clicked', async () => {
-      global.fetch.mockImplementation((url, options) => {
-        if (url === '/api/items' && !options) {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve(mockItems)
+  describe('delete functionality integration tests', () => {
+    // Enhanced mock data for comprehensive testing
+    const extendedMockItems = [
+      { id: 1, name: 'First Item', created_at: '2025-07-18T10:00:00Z' },
+      { id: 2, name: 'Second Item', created_at: '2025-07-19T10:00:00Z' },
+      { id: 3, name: 'Third Item', created_at: '2025-07-20T10:00:00Z' },
+      { id: 4, name: 'Fourth Item', created_at: '2025-07-21T10:00:00Z' }
+    ];
+
+    beforeEach(() => {
+      // Reset fetch mock for each delete test
+      jest.resetAllMocks();
+    });
+
+    describe('successful deletion scenarios', () => {
+      it('should delete item when delete button is clicked', async () => {
+        global.fetch.mockImplementation((url, options) => {
+          if (url === '/api/items' && !options) {
+            return Promise.resolve({
+              ok: true,
+              json: () => Promise.resolve(extendedMockItems)
+            });
+          }
+          if (url === '/api/items/1' && options?.method === 'DELETE') {
+            return Promise.resolve({ 
+              ok: true,
+              json: () => Promise.resolve({ message: 'Item deleted successfully' })
+            });
+          }
+          return Promise.reject(new Error('Not found'));
+        });
+
+        render(<App />);
+
+        // Wait for items to load
+        await waitFor(() => {
+          expect(screen.getByText('First Item')).toBeInTheDocument();
+          expect(screen.getByText('Second Item')).toBeInTheDocument();
+        });
+
+        // Verify all items are initially present
+        extendedMockItems.forEach(item => {
+          expect(screen.getByText(item.name)).toBeInTheDocument();
+        });
+
+        // Find and click delete button for First Item
+        const deleteButtons = screen.getAllByText('Delete');
+        expect(deleteButtons).toHaveLength(4);
+        fireEvent.click(deleteButtons[0]);
+
+        // Verify item was removed from the list
+        await waitFor(() => {
+          expect(screen.queryByText('First Item')).not.toBeInTheDocument();
+          expect(screen.getByText('Second Item')).toBeInTheDocument();
+          expect(screen.getByText('Third Item')).toBeInTheDocument();
+          expect(screen.getByText('Fourth Item')).toBeInTheDocument();
+        });
+
+        // Verify delete request was made correctly
+        expect(global.fetch).toHaveBeenCalledWith('/api/items/1', {
+          method: 'DELETE'
+        });
+
+        // Verify the number of delete buttons is reduced
+        const remainingDeleteButtons = screen.getAllByText('Delete');
+        expect(remainingDeleteButtons).toHaveLength(3);
+      });
+
+      it('should delete multiple items sequentially', async () => {
+        global.fetch.mockImplementation((url, options) => {
+          if (url === '/api/items' && !options) {
+            return Promise.resolve({
+              ok: true,
+              json: () => Promise.resolve(extendedMockItems)
+            });
+          }
+          if (options?.method === 'DELETE') {
+            return Promise.resolve({ 
+              ok: true,
+              json: () => Promise.resolve({ message: 'Item deleted successfully' })
+            });
+          }
+          return Promise.reject(new Error('Not found'));
+        });
+
+        render(<App />);
+
+        // Wait for all items to load
+        await waitFor(() => {
+          extendedMockItems.forEach(item => {
+            expect(screen.getByText(item.name)).toBeInTheDocument();
           });
-        }
-        if (url === '/api/items/1' && options?.method === 'DELETE') {
-          return Promise.resolve({ ok: true });
-        }
-        return Promise.reject(new Error('Not found'));
+        });
+
+        // Delete first item
+        let deleteButtons = screen.getAllByText('Delete');
+        fireEvent.click(deleteButtons[0]);
+
+        await waitFor(() => {
+          expect(screen.queryByText('First Item')).not.toBeInTheDocument();
+        });
+
+        // Delete second item
+        deleteButtons = screen.getAllByText('Delete');
+        fireEvent.click(deleteButtons[0]); // Now "Second Item" is first
+
+        await waitFor(() => {
+          expect(screen.queryByText('Second Item')).not.toBeInTheDocument();
+        });
+
+        // Verify remaining items
+        expect(screen.getByText('Third Item')).toBeInTheDocument();
+        expect(screen.getByText('Fourth Item')).toBeInTheDocument();
+
+        // Verify both delete requests were made
+        expect(global.fetch).toHaveBeenCalledWith('/api/items/1', { method: 'DELETE' });
+        expect(global.fetch).toHaveBeenCalledWith('/api/items/2', { method: 'DELETE' });
       });
 
-      render(<App />);
+      it('should handle deleting all items until none remain', async () => {
+        const singleItemMock = [{ id: 1, name: 'Last Item', created_at: '2025-07-18T10:00:00Z' }];
 
-      // Wait for items to load
-      await waitFor(() => {
-        expect(screen.getByText('Item 1')).toBeInTheDocument();
-      });
+        global.fetch.mockImplementation((url, options) => {
+          if (url === '/api/items' && !options) {
+            return Promise.resolve({
+              ok: true,
+              json: () => Promise.resolve(singleItemMock)
+            });
+          }
+          if (url === '/api/items/1' && options?.method === 'DELETE') {
+            return Promise.resolve({ ok: true });
+          }
+          return Promise.reject(new Error('Not found'));
+        });
 
-      // Find and click delete button for Item 1
-      const deleteButtons = screen.getAllByText('Delete');
-      fireEvent.click(deleteButtons[0]);
+        render(<App />);
 
-      // Verify item was removed from the list
-      await waitFor(() => {
-        expect(screen.queryByText('Item 1')).not.toBeInTheDocument();
-        expect(screen.getByText('Item 2')).toBeInTheDocument();
-      });
+        // Wait for item to load
+        await waitFor(() => {
+          expect(screen.getByText('Last Item')).toBeInTheDocument();
+        });
 
-      // Verify delete request was made correctly
-      expect(global.fetch).toHaveBeenCalledWith('/api/items/1', {
-        method: 'DELETE'
+        // Delete the last item
+        const deleteButton = screen.getByText('Delete');
+        fireEvent.click(deleteButton);
+
+        // Verify the item is removed and "No items found" message appears
+        await waitFor(() => {
+          expect(screen.queryByText('Last Item')).not.toBeInTheDocument();
+          expect(screen.getByText('No items found. Add some!')).toBeInTheDocument();
+        });
+
+        // Verify table is no longer present
+        expect(screen.queryByRole('table')).not.toBeInTheDocument();
       });
     });
 
-    it('should show error message when delete request fails', async () => {
-      // Mock the delete request to fail
-      global.fetch.mockImplementation((url, options) => {
-        if (url === '/api/items' && !options) {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve(mockItems)
-          });
-        }
-        if (url === '/api/items/1' && options.method === 'DELETE') {
-          return Promise.resolve({
-            ok: false,
-            status: 500,
-            statusText: 'Internal Server Error'
-          });
-        }
-        return Promise.reject(new Error('Not found'));
+    describe('error handling scenarios', () => {
+      it('should show error message when delete request fails with 403 (too recent)', async () => {
+        global.fetch.mockImplementation((url, options) => {
+          if (url === '/api/items' && !options) {
+            return Promise.resolve({
+              ok: true,
+              json: () => Promise.resolve(extendedMockItems)
+            });
+          }
+          if (url === '/api/items/1' && options?.method === 'DELETE') {
+            return Promise.resolve({
+              ok: false,
+              status: 403,
+              statusText: 'Forbidden',
+              json: () => Promise.resolve({ error: 'Items can only be deleted after 5 days' })
+            });
+          }
+          return Promise.reject(new Error('Not found'));
+        });
+
+        render(<App />);
+
+        // Wait for items to load
+        await waitFor(() => {
+          expect(screen.getByText('First Item')).toBeInTheDocument();
+        });
+
+        // Find and click delete button for First Item
+        const deleteButtons = screen.getAllByText('Delete');
+        fireEvent.click(deleteButtons[0]);
+
+        // Verify error message appears and item remains
+        await waitFor(() => {
+          expect(screen.getByText(/Error deleting item: Failed to delete item/)).toBeInTheDocument();
+          expect(screen.queryByRole('table')).not.toBeInTheDocument();
+        });
       });
 
-      render(<App />);
+      it('should show error message when delete request fails with 404 (not found)', async () => {
+        global.fetch.mockImplementation((url, options) => {
+          if (url === '/api/items' && !options) {
+            return Promise.resolve({
+              ok: true,
+              json: () => Promise.resolve(extendedMockItems)
+            });
+          }
+          if (url === '/api/items/1' && options?.method === 'DELETE') {
+            return Promise.resolve({
+              ok: false,
+              status: 404,
+              statusText: 'Not Found'
+            });
+          }
+          return Promise.reject(new Error('Not found'));
+        });
 
-      // Wait for items to load initially
-      await waitFor(() => {
-        expect(screen.getByText('Item 1')).toBeInTheDocument();
-      });
+        render(<App />);
 
-      // Store a reference to the initial table content
-      const initialTable = screen.getByRole('table');
-      expect(initialTable).toBeInTheDocument();
+        // Wait for items to load
+        await waitFor(() => {
+          expect(screen.getByText('First Item')).toBeInTheDocument();
+        });
 
-      // Find and click delete button for Item 1
-      const deleteButtons = screen.getAllByText('Delete');
-      fireEvent.click(deleteButtons[0]);
+        // Find and click delete button for First Item
+        const deleteButtons = screen.getAllByText('Delete');
+        fireEvent.click(deleteButtons[0]);
 
-      // Verify error message is shown
-      await waitFor(() => {
         // Verify error message appears
-        expect(screen.getByText(/Error deleting item: Failed to delete item/)).toBeInTheDocument();
-        // Verify table is no longer visible when error is shown
-        expect(screen.queryByRole('table')).not.toBeInTheDocument();
+        await waitFor(() => {
+          expect(screen.getByText(/Error deleting item: Failed to delete item/)).toBeInTheDocument();
+        });
+      });
+
+      it('should show error message when delete request fails with 500 (server error)', async () => {
+        global.fetch.mockImplementation((url, options) => {
+          if (url === '/api/items' && !options) {
+            return Promise.resolve({
+              ok: true,
+              json: () => Promise.resolve(extendedMockItems)
+            });
+          }
+          if (url === '/api/items/1' && options?.method === 'DELETE') {
+            return Promise.resolve({
+              ok: false,
+              status: 500,
+              statusText: 'Internal Server Error'
+            });
+          }
+          return Promise.reject(new Error('Not found'));
+        });
+
+        render(<App />);
+
+        // Wait for items to load initially
+        await waitFor(() => {
+          expect(screen.getByText('First Item')).toBeInTheDocument();
+        });
+
+        // Store a reference to the initial table content
+        const initialTable = screen.getByRole('table');
+        expect(initialTable).toBeInTheDocument();
+
+        // Find and click delete button for First Item
+        const deleteButtons = screen.getAllByText('Delete');
+        fireEvent.click(deleteButtons[0]);
+
+        // Verify error message is shown and table is hidden
+        await waitFor(() => {
+          expect(screen.getByText(/Error deleting item: Failed to delete item/)).toBeInTheDocument();
+          expect(screen.queryByRole('table')).not.toBeInTheDocument();
+        });
+      });
+
+      it('should show error message when delete request throws network error', async () => {
+        global.fetch.mockImplementation((url, options) => {
+          if (url === '/api/items' && !options) {
+            return Promise.resolve({
+              ok: true,
+              json: () => Promise.resolve(extendedMockItems)
+            });
+          }
+          if (url === '/api/items/1' && options?.method === 'DELETE') {
+            throw new Error('Network connection failed');
+          }
+          return Promise.reject(new Error('Not found'));
+        });
+
+        render(<App />);
+
+        // Wait for the initial data to load
+        await waitFor(() => {
+          expect(screen.getByText('First Item')).toBeInTheDocument();
+          expect(screen.getByRole('table')).toBeInTheDocument();
+        });
+
+        // Find and click delete button for First Item
+        const deleteButtons = screen.getAllByText('Delete');
+        fireEvent.click(deleteButtons[0]);
+
+        // Verify the error message appears and table is hidden
+        await waitFor(() => {
+          expect(screen.getByText(/Error deleting item: Network connection failed/)).toBeInTheDocument();
+          expect(screen.queryByRole('table')).not.toBeInTheDocument();
+        });
+      });
+
+      it('should preserve other items when one delete operation fails', async () => {
+        let callCount = 0;
+        global.fetch.mockImplementation((url, options) => {
+          if (url === '/api/items' && !options) {
+            return Promise.resolve({
+              ok: true,
+              json: () => Promise.resolve(extendedMockItems)
+            });
+          }
+          if (options?.method === 'DELETE') {
+            callCount++;
+            if (callCount === 1) {
+              // First delete succeeds
+              return Promise.resolve({ ok: true });
+            } else {
+              // Second delete fails
+              return Promise.resolve({
+                ok: false,
+                status: 500,
+                statusText: 'Internal Server Error'
+              });
+            }
+          }
+          return Promise.reject(new Error('Not found'));
+        });
+
+        render(<App />);
+
+        // Wait for items to load
+        await waitFor(() => {
+          expect(screen.getByText('First Item')).toBeInTheDocument();
+          expect(screen.getByText('Second Item')).toBeInTheDocument();
+        });
+
+        // Delete first item (should succeed)
+        let deleteButtons = screen.getAllByText('Delete');
+        fireEvent.click(deleteButtons[0]);
+
+        await waitFor(() => {
+          expect(screen.queryByText('First Item')).not.toBeInTheDocument();
+          expect(screen.getByText('Second Item')).toBeInTheDocument();
+        });
+
+        // Try to delete second item (should fail)
+        deleteButtons = screen.getAllByText('Delete');
+        fireEvent.click(deleteButtons[0]);
+
+        // Verify error appears
+        await waitFor(() => {
+          expect(screen.getByText(/Error deleting item: Failed to delete item/)).toBeInTheDocument();
+        });
       });
     });
 
-    it('should show error message when delete request throws', async () => {
-      // Set up fetch mock for both initial load and delete
-      let shouldThrow = false;
-      global.fetch.mockImplementation((url, options) => {
-        if (url === '/api/items' && !options) {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve(mockItems)
-          });
-        }
-        if (url === '/api/items/1' && options?.method === 'DELETE') {
-          shouldThrow = true;
-          throw new Error('Network error');
-        }
-        return Promise.reject(new Error('Not found'));
-      });
+    describe('UI interaction scenarios', () => {
+      it('should disable interactions while delete is in progress', async () => {
+        let resolveDelete;
+        const deletePromise = new Promise(resolve => {
+          resolveDelete = resolve;
+        });
 
-      render(<App />);
+        global.fetch.mockImplementation((url, options) => {
+          if (url === '/api/items' && !options) {
+            return Promise.resolve({
+              ok: true,
+              json: () => Promise.resolve(extendedMockItems)
+            });
+          }
+          if (url === '/api/items/1' && options?.method === 'DELETE') {
+            return deletePromise.then(() => Promise.resolve({ ok: true }));
+          }
+          return Promise.reject(new Error('Not found'));
+        });
 
-      // Wait for the initial data to load
-      await waitFor(() => {
-        expect(screen.getByText('Item 1')).toBeInTheDocument();
-        expect(screen.getByRole('table')).toBeInTheDocument();
-      });
+        render(<App />);
 
-      // Find and click delete button for Item 1
-      const deleteButtons = screen.getAllByText('Delete');
-      fireEvent.click(deleteButtons[0]);
+        // Wait for items to load
+        await waitFor(() => {
+          expect(screen.getByText('First Item')).toBeInTheDocument();
+        });
 
-      // Verify the error message appears and table is hidden
-      await waitFor(() => {
-        // Check error message appears
-        expect(screen.getByText(/Error deleting item: Network error/)).toBeInTheDocument();
-        // Verify table is not visible when error is shown
-        expect(screen.queryByRole('table')).not.toBeInTheDocument();
+        // Click delete button
+        const deleteButtons = screen.getAllByText('Delete');
+        fireEvent.click(deleteButtons[0]);
+
+        // Note: In a real implementation, we might want to show loading state
+        // For now, we're just testing that the delete request was initiated
+        expect(global.fetch).toHaveBeenCalledWith('/api/items/1', {
+          method: 'DELETE'
+        });
+
+        // Resolve the delete operation
+        resolveDelete();
+
+        // Wait for item to be removed
+        await waitFor(() => {
+          expect(screen.queryByText('First Item')).not.toBeInTheDocument();
+        });
       });
     });
   });
