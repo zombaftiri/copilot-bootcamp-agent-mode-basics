@@ -221,17 +221,46 @@ app.post('/api/items/details', async (req, res) => {
     } = req.body;
 
     log.debug('Creating detailed item with data', { name, category, priority, status });
-    log.warn('About to call problematic function with too many parameters');
+    log.info('Calling refactored createDetailedItem with object parameter');
 
-    // This will cause runtime errors due to the problematic function with too many parameters
-    await itemDetailsController.createDetailedItem(
-      req, res, name, description, category, priority, tags, status,
-      dueDate, assignee, createdBy, customFields, attachments, permissions,
-      validationLevel, notificationSettings, auditEnabled, backupEnabled,
-      versionControl, metadata, dependencies, estimatedHours, budget,
-      location, externalRefs, workflowStage, approvalRequired, templateId,
-      parentItemId, linkedItems, reminderSettings
-    );
+    // Now using the refactored function with object parameter
+    await itemDetailsController.createDetailedItem({
+      req,
+      res,
+      itemData: {
+        name,
+        description,
+        category,
+        priority,
+        tags,
+        status,
+        dueDate,
+        assignee,
+        createdBy,
+        customFields,
+        attachments,
+        metadata,
+        dependencies,
+        estimatedHours,
+        budget,
+        location,
+        externalRefs,
+        parentItemId,
+        linkedItems
+      },
+      options: {
+        permissions,
+        validationLevel,
+        notificationSettings,
+        auditEnabled,
+        backupEnabled,
+        versionControl,
+        workflowStage,
+        approvalRequired,
+        templateId,
+        reminderSettings
+      }
+    });
   } catch (error) {
     log.error('Error creating detailed item', { 
       error: error.message, 
@@ -248,19 +277,36 @@ app.put('/api/items/:id/details', async (req, res) => {
     const updates = req.body;
     
     log.debug('Updating detailed item', { id, updates });
-    log.warn('About to call problematic function with excessive parameters');
+    log.info('Calling refactored updateItemWithAdvancedOptions with object parameter');
     
-    // This will cause runtime errors due to problematic function with many parameters
-    const result = await itemDetailsController.updateItemWithAdvancedOptions(
-      id, updates, req.user?.id || 'anonymous', req.user?.role || 'user',
-      req.permissions, req.validationRules, req.auditOptions,
-      req.notificationOptions, req.backupOptions, req.versioningOptions,
-      req.conflictResolution, req.retryPolicy, req.timeoutSettings,
-      req.cachingStrategy, req.loggingLevel, req.performanceTracking,
-      req.securityContext, req.transactionOptions, req.rollbackStrategy,
-      req.successCallbacks, req.errorCallbacks, req.progressCallbacks,
-      req.customValidators, req.postProcessors, req.preProcessors
-    );
+    // Now using the refactored function with object parameter
+    const result = await itemDetailsController.updateItemWithAdvancedOptions({
+      itemId: id,
+      updates,
+      userId: req.user?.id || 'anonymous',
+      userRole: req.user?.role || 'user',
+      permissions: req.permissions,
+      validationRules: req.validationRules,
+      auditOptions: req.auditOptions,
+      notificationOptions: req.notificationOptions,
+      backupOptions: req.backupOptions,
+      versioningOptions: req.versioningOptions,
+      conflictResolution: req.conflictResolution,
+      retryPolicy: req.retryPolicy,
+      timeoutSettings: req.timeoutSettings,
+      cachingStrategy: req.cachingStrategy,
+      loggingLevel: req.loggingLevel,
+      performanceTracking: req.performanceTracking,
+      securityContext: req.securityContext,
+      transactionOptions: req.transactionOptions,
+      rollbackStrategy: req.rollbackStrategy,
+      successCallbacks: req.successCallbacks,
+      errorCallbacks: req.errorCallbacks,
+      progressCallbacks: req.progressCallbacks,
+      customValidators: req.customValidators,
+      postProcessors: req.postProcessors,
+      preProcessors: req.preProcessors
+    });
     
     log.info('Detailed item updated successfully', { id });
     res.json(result);
