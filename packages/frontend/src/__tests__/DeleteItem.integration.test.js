@@ -356,14 +356,14 @@ describe('Delete Item Integration Tests', () => {
       expect(table).toHaveAttribute('aria-label', 'items table');
 
       // Verify delete buttons are accessible
-      const deleteButtons = screen.getAllByRole('button', { name: 'Delete' });
+      const deleteButtons = screen.getAllByRole('button', { name: /Delete.*/ });
       expect(deleteButtons).toHaveLength(4);
 
       // Perform delete and verify accessibility is maintained
       fireEvent.click(deleteButtons[0]);
 
       await waitFor(() => {
-        const remainingButtons = screen.getAllByRole('button', { name: 'Delete' });
+        const remainingButtons = screen.getAllByRole('button', { name: /Delete.*/ });
         expect(remainingButtons).toHaveLength(3);
         expect(screen.getByRole('table')).toBeInTheDocument();
       });
@@ -381,7 +381,7 @@ describe('Delete Item Integration Tests', () => {
       });
 
       // Focus on first delete button and trigger with Enter key
-      const firstDeleteButton = screen.getAllByRole('button', { name: 'Delete' })[0];
+      const firstDeleteButton = screen.getAllByRole('button', { name: /Delete.*/ })[0];
       firstDeleteButton.focus();
       fireEvent.keyDown(firstDeleteButton, { key: 'Enter', code: 'Enter' });
 
