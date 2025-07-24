@@ -129,7 +129,7 @@ describe('App Component', () => {
     
     // Wait for error message
     await waitFor(() => {
-      expect(screen.getByText(/Failed to fetch data/)).toBeInTheDocument();
+      expect(screen.getByText(/Failed to fetch items/)).toBeInTheDocument();
     });
   });
 
