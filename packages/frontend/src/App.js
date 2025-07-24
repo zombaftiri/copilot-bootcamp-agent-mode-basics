@@ -28,7 +28,25 @@ import ItemDetails from './components/ItemDetails';
 import ItemService from './utils/ItemService';
 import './App.css';
 
+// Logging utility for debugging
+const log = {
+  debug: (message, data = null) => {
+    console.debug(`[App] ${message}`, data ? { data } : '');
+  },
+  error: (message, error = null) => {
+    console.error(`[App ERROR] ${message}`, error ? { error } : '');
+  },
+  warn: (message, data = null) => {
+    console.warn(`[App WARNING] ${message}`, data ? { data } : '');
+  },
+  info: (message, data = null) => {
+    console.info(`[App] ${message}`, data ? { data } : '');
+  }
+};
+
 function App() {
+  log.info('App component initializing');
+  
   const [data, setData] = useState([]);
   const [detailedItems, setDetailedItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -38,36 +56,61 @@ function App() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [itemService] = useState(new ItemService());
 
+  log.debug('Initial state set', { 
+    dataLength: data.length, 
+    loading, 
+    error,
+    itemDetailsOpen 
+  });
+
   useEffect(() => {
+    log.info('App useEffect triggered - fetching initial data');
     fetchData();
     fetchDetailedItems();
   }, []);
 
   const fetchData = async () => {
+    log.debug('fetchData called');
     try {
       setLoading(true);
+      log.info('Fetching items from API');
       const response = await fetch('/api/items');
+      
       if (!response.ok) {
-        throw new Error('Network response was not ok');
+        log.error('Failed to fetch items', { status: response.status });
+        throw new Error('Failed to fetch items');
       }
-      const result = await response.json();
-      setData(result);
+      
+      const items = await response.json();
+      log.info('Items fetched successfully', { count: items.length });
+      setData(items);
       setError(null);
     } catch (err) {
-      setError('Failed to fetch data: ' + err.message);
-      console.error('Error fetching data:', err);
+      log.error('Error in fetchData', err);
+      setError(err.message);
     } finally {
       setLoading(false);
+      log.debug('fetchData completed');
     }
   };
 
   const fetchDetailedItems = async () => {
+    log.debug('fetchDetailedItems called');
     try {
+      log.info('Fetching detailed items from API');
       const response = await fetch('/api/items/details');
-      const result = await response.json();
-      setDetailedItems(result);
+      
+      if (!response.ok) {
+        log.error('Failed to fetch detailed items', { status: response.status });
+        throw new Error('Failed to fetch detailed items');
+      }
+      
+      const items = await response.json();
+      log.info('Detailed items fetched successfully', { count: items.length });
+      setDetailedItems(items);
     } catch (err) {
-      console.error('Error fetching detailed items:', err);
+      log.error('Error in fetchDetailedItems', err);
+      // Don't set main error state for detailed items fetch failure
     }
   };
 

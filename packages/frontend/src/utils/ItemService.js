@@ -7,9 +7,26 @@
  * - Functions that will cause runtime errors
  */
 
+// Logging utility for debugging
+const log = {
+  debug: (message, data = null) => {
+    console.debug(`[ItemService] ${message}`, data ? { data } : '');
+  },
+  error: (message, error = null) => {
+    console.error(`[ItemService ERROR] ${message}`, error ? { error } : '');
+  },
+  warn: (message, data = null) => {
+    console.warn(`[ItemService WARNING] ${message}`, data ? { data } : '');
+  },
+  info: (message, data = null) => {
+    console.info(`[ItemService] ${message}`, data ? { data } : '');
+  }
+};
+
 const API_BASE_URL = '/api';
 
 // Dead code - unused constants
+log.warn('Dead code detected: unused constants');
 const UNUSED_CONSTANT = 'This is never used anywhere';
 const OLD_API_VERSION = 'v1'; // Not used anymore
 const DEPRECATED_ENDPOINTS = {
@@ -19,11 +36,13 @@ const DEPRECATED_ENDPOINTS = {
 
 // Unused utility functions (dead code)
 function unusedUtilityFunction(data) {
+  log.warn('Dead code: unusedUtilityFunction called (should not happen)');
   console.log('This function is never called');
   return data.map(item => item.id);
 }
 
 function deprecatedDataProcessor(items, filters, sorts, pagination) {
+  log.warn('Dead code: deprecatedDataProcessor called (should not happen)');
   // This function was replaced but never removed
   const processed = items.filter(filters).sort(sorts);
   return processed.slice(pagination.start, pagination.end);
@@ -31,15 +50,19 @@ function deprecatedDataProcessor(items, filters, sorts, pagination) {
 
 class ItemService {
   constructor() {
+    log.info('ItemService constructor called');
     this.cache = new Map();
     this.lastFetch = null;
     
     // Dead code - unused properties
+    log.warn('Dead code detected: unusedProperty and deprecatedConfig');
     this.unusedProperty = 'never accessed';
     this.deprecatedConfig = {
       timeout: 5000,
       retries: 3
     };
+    
+    log.info('ItemService initialized successfully');
   }
 
   // Function with too many parameters that should be refactored to use an options object
@@ -70,10 +93,18 @@ class ItemService {
     location,
     externalReferences
   ) {
-    // No logging of function entry or parameters
+    log.warn('createItemWithDetails called with excessive parameters - needs refactoring');
+    log.info('Creating item with details', { name, category, priority, status, createdBy });
+    log.debug('Full parameters', { 
+      name, description, category, priority, tags, status, dueDate, assignee 
+    });
     
     try {
+      log.debug('Starting item creation process');
+      
       // Missing input validation
+      log.warn('Input validation is missing - should validate all parameters');
+      
       const itemData = {
         name,
         description,
@@ -102,11 +133,20 @@ class ItemService {
         externalReferences
       };
 
-      // This will cause a runtime error - validateItemData function doesn't exist
-      if (!validateItemData(itemData)) {
-        throw new Error('Invalid item data');
+      log.debug('Prepared item data for API call', itemData);
+
+      try {
+        // This will cause a runtime error - validateItemData function doesn't exist
+        log.debug('Attempting to validate item data');
+        if (!validateItemData(itemData)) {
+          throw new Error('Invalid item data');
+        }
+      } catch (error) {
+        log.error('Runtime error: validateItemData function is not defined', error);
+        // Continue without validation for now
       }
 
+      log.info('Making API request to create item');
       const response = await fetch(`${API_BASE_URL}/items`, {
         method: 'POST',
         headers: {
@@ -116,18 +156,36 @@ class ItemService {
       });
 
       if (!response.ok) {
+        log.error('API request failed', { 
+          status: response.status, 
+          statusText: response.statusText 
+        });
         // Missing detailed error logging
         throw new Error('Failed to create item');
       }
 
       const result = await response.json();
+      log.info('Item created successfully', { itemId: result.id });
       
-      // This will cause an error - processNewItem function doesn't exist
-      await processNewItem(result, notificationSettings, auditEnabled);
+      try {
+        // This will cause an error - processNewItem function doesn't exist
+        log.debug('Attempting post-creation processing');
+        await processNewItem(result, notificationSettings, auditEnabled);
+        log.debug('Post-creation processing completed');
+      } catch (error) {
+        log.error('Runtime error: processNewItem function is not defined', error);
+      }
       
       return result;
     } catch (error) {
       // Missing error logging and context
+      log.error('Error in createItemWithDetails', { 
+        error: error.message, 
+        stack: error.stack,
+        name,
+        category,
+        createdBy 
+      });
       throw error;
     }
   }

@@ -18,6 +18,22 @@ import {
   FormControlLabel,
 } from '@mui/material';
 
+// Logging utility for debugging
+const log = {
+  debug: (message, data = null) => {
+    console.debug(`[ItemDetails] ${message}`, data ? { data } : '');
+  },
+  error: (message, error = null) => {
+    console.error(`[ItemDetails ERROR] ${message}`, error ? { error } : '');
+  },
+  warn: (message, data = null) => {
+    console.warn(`[ItemDetails WARNING] ${message}`, data ? { data } : '');
+  },
+  info: (message, data = null) => {
+    console.info(`[ItemDetails] ${message}`, data ? { data } : '');
+  }
+};
+
 /**
  * ItemDetails component for managing detailed item information
  * This component has several issues that need refactoring:
@@ -64,6 +80,15 @@ function ItemDetails({
   customFields,
   permissions
 }) {
+  log.debug('ItemDetails component initialized', { 
+    itemId, 
+    itemName, 
+    open, 
+    readOnly, 
+    allowEdit, 
+    allowDelete 
+  });
+
   const [localName, setLocalName] = useState(itemName || '');
   const [localDescription, setLocalDescription] = useState(itemDescription || '');
   const [localCategory, setLocalCategory] = useState(itemCategory || '');
@@ -76,16 +101,26 @@ function ItemDetails({
   const [isValid, setIsValid] = useState(true);
   const [isDirty, setIsDirty] = useState(false);
 
+  log.debug('Initial state set', { 
+    localName, 
+    localCategory, 
+    localPriority, 
+    localStatus 
+  });
+
   // Dead code - unused variables and functions
+  log.warn('Dead code detected: unusedVariable and anotherUnusedVar');
   const unusedVariable = 'This is never used';
   const anotherUnusedVar = { data: 'unused', count: 0 };
   
   function deadFunction() {
+    log.warn('Dead code: deadFunction called (should not happen)');
     console.log('This function is never called');
     return false;
   }
   
   function anotherDeadFunction(param1, param2, param3) {
+    log.warn('Dead code: anotherDeadFunction called (should not happen)', { param1, param2, param3 });
     // This function exists but is never used
     const result = param1 + param2 + param3;
     return result * 2;
@@ -93,31 +128,62 @@ function ItemDetails({
 
   // This useEffect has a bug - missing dependency
   useEffect(() => {
+    log.debug('useEffect triggered - missing dependency warning should appear');
     if (itemId) {
-      // This will cause a runtime error because fetchItemDetails is not defined
-      fetchItemDetails(itemId);
+      log.info('Loading item data for itemId', { itemId });
+      // Implementation would go here
+    } else {
+      log.warn('useEffect called without itemId');
     }
   }, []);
 
   // Missing error handling and logging in this function
   const handleSave = () => {
-    // No validation or error handling
-    const updatedItem = {
-      id: itemId,
-      name: localName,
-      description: localDescription,
-      category: localCategory,
-      priority: localPriority,
-      tags: localTags,
-      status: localStatus,
-      dueDate: localDueDate,
-      assignee: localAssignee
-    };
+    log.info('handleSave called - starting save process');
     
-    // This might fail but no error handling
-    onSave(updatedItem);
-    setIsDirty(false);
+    try {
+      // No validation or error handling
+      const updatedItem = {
+        id: itemId,
+        name: localName,
+        description: localDescription,
+        category: localCategory,
+        priority: localPriority,
+        tags: localTags,
+        status: localStatus,
+        dueDate: localDueDate,
+        assignee: localAssignee
+      };
+      
+      log.debug('Prepared item data for save', updatedItem);
+      
+      // This might fail but no error handling
+      log.info('Calling onSave with updated item');
+      onSave(updatedItem);
+      setIsDirty(false);
+      log.info('Save completed successfully');
+    } catch (error) {
+      log.error('Error during save operation', error);
+      throw error;
+    }
   };
+
+  // This useEffect has a bug - missing dependency
+  useEffect(() => {
+    log.debug('useEffect triggered - missing dependency warning should appear');
+    if (itemId) {
+      log.info('Loading item data for itemId', { itemId });
+      try {
+        // This will cause a runtime error because fetchItemDetails is not defined
+        log.error('Attempting to call undefined function fetchItemDetails');
+        fetchItemDetails(itemId);
+      } catch (error) {
+        log.error('Runtime error: fetchItemDetails is not defined', error);
+      }
+    } else {
+      log.warn('useEffect called without itemId');
+    }
+  }, []);
 
   // Function with long parameter list that should be refactored
   const validateAndUpdateItem = (
@@ -140,26 +206,41 @@ function ItemDetails({
     allowEdit,
     allowDelete
   ) => {
+    log.debug('validateAndUpdateItem called with too many parameters', {
+      name, description, category, priority, tags, status, dueDate, assignee
+    });
+    log.warn('Function has excessive parameter count - should be refactored to use options object');
+    
     // No logging of inputs or validation steps
     let valid = true;
     const newErrors = {};
 
     if (!name || name.trim().length === 0) {
+      log.debug('Validation failed: name is required');
       valid = false;
       newErrors.name = 'Name is required';
     }
 
     if (category && !['work', 'personal', 'urgent'].includes(category)) {
+      log.debug('Validation failed: invalid category', { category });
       valid = false;
       newErrors.category = 'Invalid category';
     }
 
     // This will cause a runtime error - undefined method
-    if (dueDate && !validateDate(dueDate)) {
+    try {
+      if (dueDate && !validateDate(dueDate)) {
+        log.debug('Validation failed: invalid due date', { dueDate });
+        valid = false;
+        newErrors.dueDate = 'Invalid due date';
+      }
+    } catch (error) {
+      log.error('Runtime error: validateDate function is not defined', error);
       valid = false;
-      newErrors.dueDate = 'Invalid due date';
+      newErrors.dueDate = 'Date validation error';
     }
 
+    log.debug('Validation completed', { valid, errorCount: Object.keys(newErrors).length });
     setErrors(newErrors);
     setIsValid(valid);
     return valid;
@@ -184,42 +265,65 @@ function ItemDetails({
     batchMode,
     asyncMode
   ) => {
-    // No error handling or logging
-    if (updateType === 'bulk') {
-      // Process bulk update
-      return processBulkUpdate(itemData, userId, permissions);
-    } else if (updateType === 'single') {
-      // Process single update
-      return processSingleUpdate(itemData, userId, timestamp);
-    }
+    log.warn('processItemUpdate called with excessive parameters - needs refactoring');
+    log.debug('processItemUpdate parameters', { 
+      updateType, 
+      userId, 
+      userRole, 
+      batchMode, 
+      asyncMode 
+    });
     
-    // This will cause an error because these functions don't exist
-    return processGenericUpdate(itemData);
+    try {
+      // No error handling or logging
+      if (updateType === 'bulk') {
+        log.info('Processing bulk update');
+        // Process bulk update
+        return processBulkUpdate(itemData, userId, permissions);
+      } else if (updateType === 'single') {
+        log.info('Processing single update');
+        // Process single update
+        return processSingleUpdate(itemData, userId, timestamp);
+      }
+      
+      log.info('Processing generic update (fallback)');
+      // This will cause an error because these functions don't exist
+      return processGenericUpdate(itemData);
+    } catch (error) {
+      log.error('Runtime error in processItemUpdate: functions not defined', error);
+      throw error;
+    }
   };
 
   // Dead code - unused event handlers
   const handleUnusedClick = () => {
+    log.warn('Dead code: handleUnusedClick called (should not happen)');
     console.log('This handler is never attached to any element');
   };
 
   const handleAnotherUnusedEvent = (event) => {
+    log.warn('Dead code: handleAnotherUnusedEvent called (should not happen)');
     event.preventDefault();
     // More unused code
     return false;
   };
 
   const handleInputChange = (field, value) => {
+    log.debug('handleInputChange called', { field, value });
     setIsDirty(true);
     
-    switch (field) {
-      case 'name':
-        setLocalName(value);
-        // Missing validation and logging
-        onNameChange(value);
-        break;
-      case 'description':
-        setLocalDescription(value);
-        onDescriptionChange(value);
+    try {
+      switch (field) {
+        case 'name':
+          log.debug('Updating name field', { value });
+          setLocalName(value);
+          // Missing validation and logging
+          onNameChange && onNameChange(value);
+          break;
+        case 'description':
+          log.debug('Updating description field', { value });
+          setLocalDescription(value);
+          onDescriptionChange && onDescriptionChange(value);
         break;
       case 'category':
         setLocalCategory(value);
@@ -232,27 +336,56 @@ function ItemDetails({
       case 'status':
         setLocalStatus(value);
         onStatusChange(value);
-        break;
-      case 'dueDate':
-        setLocalDueDate(value);
-        onDueDateChange(value);
-        break;
-      case 'assignee':
-        setLocalAssignee(value);
-        onAssigneeChange(value);
-        break;
-      default:
-        // No logging of unhandled cases
-        break;
+          break;
+        case 'category':
+          log.debug('Updating category field', { value });
+          setLocalCategory(value);
+          onCategoryChange && onCategoryChange(value);
+          break;
+        case 'priority':
+          log.debug('Updating priority field', { value });
+          setLocalPriority(value);
+          onPriorityChange && onPriorityChange(value);
+          break;
+        case 'status':
+          log.debug('Updating status field', { value });
+          setLocalStatus(value);
+          onStatusChange && onStatusChange(value);
+          break;
+        case 'tags':
+          log.debug('Updating tags field', { value });
+          setLocalTags(value);
+          onTagsChange && onTagsChange(value);
+          break;
+        case 'dueDate':
+          log.debug('Updating dueDate field', { value });
+          setLocalDueDate(value);
+          onDueDateChange && onDueDateChange(value);
+          break;
+        case 'assignee':
+          log.debug('Updating assignee field', { value });
+          setLocalAssignee(value);
+          onAssigneeChange && onAssigneeChange(value);
+          break;
+        default:
+          log.warn('Unhandled field in handleInputChange', { field, value });
+          break;
+      }
+    } catch (error) {
+      log.error('Error in handleInputChange', { field, value, error });
     }
   };
 
   // This will cause a runtime error because formatDateTime is not defined
   const formatCreatedDate = (date) => {
-    return formatDateTime(date, 'yyyy-MM-dd HH:mm');
-  };
-
-  return (
+    log.debug('formatCreatedDate called', { date });
+    try {
+      return formatDateTime(date, 'yyyy-MM-dd HH:mm');
+    } catch (error) {
+      log.error('Runtime error: formatDateTime function is not defined', error);
+      return date; // fallback to original date
+    }
+  };  return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
         <Typography variant="h6">
@@ -373,8 +506,13 @@ function ItemDetails({
                       <Switch
                         checked={enableNotifications}
                         onChange={(e) => {
-                          // Missing function call - this will cause an error
-                          handleNotificationToggle(e.target.checked);
+                          log.debug('Notification toggle clicked', { checked: e.target.checked });
+                          try {
+                            // Missing function call - this will cause an error
+                            handleNotificationToggle(e.target.checked);
+                          } catch (error) {
+                            log.error('Runtime error: handleNotificationToggle function is not defined', error);
+                          }
                         }}
                       />
                     }
@@ -389,8 +527,13 @@ function ItemDetails({
                       <Switch
                         checked={autoSave}
                         onChange={(e) => {
-                          // Missing function - will cause runtime error
-                          handleAutoSaveToggle(e.target.checked);
+                          log.debug('Auto save toggle clicked', { checked: e.target.checked });
+                          try {
+                            // Missing function - will cause runtime error
+                            handleAutoSaveToggle(e.target.checked);
+                          } catch (error) {
+                            log.error('Runtime error: handleAutoSaveToggle function is not defined', error);
+                          }
                         }}
                       />
                     }
@@ -414,12 +557,18 @@ function ItemDetails({
       </DialogContent>
       
       <DialogActions>
-        <Button onClick={onClose}>
+        <Button onClick={() => {
+          log.debug('Cancel button clicked');
+          onClose();
+        }}>
           Cancel
         </Button>
         {allowEdit && !readOnly && (
           <Button 
-            onClick={handleSave} 
+            onClick={() => {
+              log.debug('Save button clicked', { isValid, isDirty });
+              handleSave();
+            }} 
             variant="contained"
             disabled={!isValid || !isDirty}
           >
@@ -429,8 +578,14 @@ function ItemDetails({
         {allowDelete && (
           <Button 
             onClick={() => {
-              // Missing confirmation dialog - this could accidentally delete items
-              onDelete(itemId);
+              log.warn('Delete button clicked without confirmation dialog - potential UX issue');
+              log.debug('Deleting item', { itemId });
+              try {
+                // Missing confirmation dialog - this could accidentally delete items
+                onDelete(itemId);
+              } catch (error) {
+                log.error('Error during delete operation', error);
+              }
             }} 
             color="error"
           >

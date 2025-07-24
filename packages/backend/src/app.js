@@ -4,18 +4,38 @@ const morgan = require('morgan');
 const Database = require('better-sqlite3');
 const ItemDetailsController = require('./controllers/ItemDetailsController');
 
+// Logging utility for debugging
+const log = {
+  debug: (message, data = null) => {
+    console.debug(`[App] ${message}`, data ? { data } : '');
+  },
+  error: (message, error = null) => {
+    console.error(`[App ERROR] ${message}`, error ? { error } : '');
+  },
+  warn: (message, data = null) => {
+    console.warn(`[App WARNING] ${message}`, data ? { data } : '');
+  },
+  info: (message, data = null) => {
+    console.info(`[App] ${message}`, data ? { data } : '');
+  }
+};
+
 // Initialize express app
+log.info('Initializing Express application');
 const app = express();
 
 // Middleware
+log.info('Setting up middleware');
 app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
 
 // Initialize in-memory SQLite database
+log.info('Initializing in-memory SQLite database');
 const db = new Database(':memory:');
 
 // Create tables
+log.info('Creating database tables');
 db.exec(`
   CREATE TABLE IF NOT EXISTS items (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -56,19 +76,23 @@ db.exec(`
 `);
 
 // Insert some initial data
+log.info('Inserting initial sample data');
 const initialItems = ['Item 1', 'Item 2', 'Item 3'];
 const insertStmt = db.prepare('INSERT INTO items (name) VALUES (?)');
 
 initialItems.forEach(item => {
   insertStmt.run(item);
+  log.debug('Inserted sample item', { item });
 });
 
-console.log('In-memory database initialized with sample data');
+log.info('In-memory database initialized with sample data');
 
 // Initialize ItemDetailsController
+log.info('Initializing ItemDetailsController');
 const itemDetailsController = new ItemDetailsController(db);
 
 // Insert some sample detailed items with problematic function calls that will cause runtime errors
+log.info('Creating sample detailed items for refactoring exercises');
 try {
   // This will cause errors due to the long parameter list and missing functions in the controller
   db.prepare(`
@@ -99,74 +123,93 @@ try {
     new Date().toISOString()
   );
 
-  console.log('Sample detailed items created for refactoring exercises');
+  log.info('Sample detailed items created for refactoring exercises');
 } catch (error) {
-  console.error('Error creating sample detailed items:', error);
+  log.error('Error creating sample detailed items', error);
 }
 
 // API Routes
+log.info('Setting up API routes');
+
 app.get('/api/items', (req, res) => {
+  log.debug('GET /api/items - Fetching all items');
   try {
     const items = db.prepare('SELECT * FROM items ORDER BY created_at DESC').all();
+    log.info('Items fetched successfully', { count: items.length });
     res.json(items);
   } catch (error) {
-    console.error('Error fetching items:', error);
+    log.error('Error fetching items', error);
     res.status(500).json({ error: 'Failed to fetch items' });
   }
 });
 
 app.post('/api/items', (req, res) => {
+  log.debug('POST /api/items - Creating new item');
   try {
     const { name } = req.body;
+    log.debug('Request data', { name });
     
     if (!name || typeof name !== 'string' || name.trim() === '') {
+      log.warn('Item creation failed: invalid name', { name });
       return res.status(400).json({ error: 'Item name is required' });
     }
     
     const result = insertStmt.run(name);
     const id = result.lastInsertRowid;
+    log.debug('Item inserted', { id });
     
     const newItem = db.prepare('SELECT * FROM items WHERE id = ?').get(id);
+    log.info('Item created successfully', { itemId: id, name });
     res.status(201).json(newItem);
   } catch (error) {
-    console.error('Error creating item:', error);
+    log.error('Error creating item', error);
     res.status(500).json({ error: 'Failed to create item' });
   }
 });
 
 app.delete('/api/items/:id', (req, res) => {
+  log.debug('DELETE /api/items/:id - Deleting item');
   try {
     const { id } = req.params;
+    log.debug('Request parameters', { id });
     
     if (!id || isNaN(parseInt(id))) {
+      log.warn('Item deletion failed: invalid ID', { id });
       return res.status(400).json({ error: 'Valid item ID is required' });
     }
     
     const deleteStmt = db.prepare('DELETE FROM items WHERE id = ?');
     const result = deleteStmt.run(parseInt(id));
+    log.debug('Deletion result', { changes: result.changes });
     
     if (result.changes === 0) {
+      log.warn('Item not found for deletion', { id });
       return res.status(404).json({ error: 'Item not found' });
     }
     
+    log.info('Item deleted successfully', { id });
     res.status(200).json({ message: 'Item deleted successfully' });
   } catch (error) {
-    console.error('Error deleting item:', error);
+    log.error('Error deleting item', error);
     res.status(500).json({ error: 'Failed to delete item' });
   }
 });
 
 // Item Details API Routes - these will have runtime errors for the refactoring exercise
+log.info('Setting up Item Details API routes');
+
 app.get('/api/items/:id/details', async (req, res) => {
+  log.debug('GET /api/items/:id/details - Fetching item details');
   try {
     await itemDetailsController.getItemWithRelatedData(req, res);
   } catch (error) {
-    console.error('Error in item details route:', error);
+    log.error('Error in item details route', { error: error.message, itemId: req.params.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 app.post('/api/items/details', async (req, res) => {
+  log.debug('POST /api/items/details - Creating detailed item');
   try {
     const {
       name, description, category, priority, tags, status, dueDate,
@@ -176,6 +219,9 @@ app.post('/api/items/details', async (req, res) => {
       location, externalRefs, workflowStage, approvalRequired, templateId,
       parentItemId, linkedItems, reminderSettings
     } = req.body;
+
+    log.debug('Creating detailed item with data', { name, category, priority, status });
+    log.warn('About to call problematic function with too many parameters');
 
     // This will cause runtime errors due to the problematic function with too many parameters
     await itemDetailsController.createDetailedItem(
@@ -187,15 +233,22 @@ app.post('/api/items/details', async (req, res) => {
       parentItemId, linkedItems, reminderSettings
     );
   } catch (error) {
-    console.error('Error creating detailed item:', error);
+    log.error('Error creating detailed item', { 
+      error: error.message, 
+      stack: error.stack 
+    });
     res.status(500).json({ error: 'Failed to create detailed item' });
   }
 });
 
 app.put('/api/items/:id/details', async (req, res) => {
+  log.debug('PUT /api/items/:id/details - Updating detailed item');
   try {
     const { id } = req.params;
     const updates = req.body;
+    
+    log.debug('Updating detailed item', { id, updates });
+    log.warn('About to call problematic function with excessive parameters');
     
     // This will cause runtime errors due to problematic function with many parameters
     const result = await itemDetailsController.updateItemWithAdvancedOptions(
@@ -209,31 +262,43 @@ app.put('/api/items/:id/details', async (req, res) => {
       req.customValidators, req.postProcessors, req.preProcessors
     );
     
+    log.info('Detailed item updated successfully', { id });
     res.json(result);
   } catch (error) {
-    console.error('Error updating detailed item:', error);
+    log.error('Error updating detailed item', { 
+      error: error.message, 
+      itemId: id 
+    });
     res.status(500).json({ error: 'Failed to update detailed item' });
   }
 });
 
 app.delete('/api/items/:id/details', async (req, res) => {
+  log.debug('DELETE /api/items/:id/details - Deleting detailed item');
   try {
     await itemDetailsController.deleteItemWithCleanup(req, res);
   } catch (error) {
-    console.error('Error deleting detailed item:', error);
+    log.error('Error deleting detailed item', { 
+      error: error.message, 
+      itemId: req.params.id 
+    });
     res.status(500).json({ error: 'Failed to delete detailed item' });
   }
 });
 
 // Route to get all detailed items (for testing purposes)
 app.get('/api/items/details', (req, res) => {
+  log.debug('GET /api/items/details - Fetching all detailed items');
   try {
     const detailedItems = db.prepare('SELECT * FROM item_details ORDER BY created_at DESC').all();
+    log.info('Detailed items fetched successfully', { count: detailedItems.length });
     res.json(detailedItems);
   } catch (error) {
-    console.error('Error fetching detailed items:', error);
+    log.error('Error fetching detailed items', error);
     res.status(500).json({ error: 'Failed to fetch detailed items' });
   }
 });
+
+log.info('All API routes configured successfully');
 
 module.exports = { app, db, insertStmt };

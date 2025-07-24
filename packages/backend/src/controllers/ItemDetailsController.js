@@ -1,6 +1,22 @@
 const express = require('express');
 const { body, param, validationResult } = require('express-validator');
 
+// Logging utility for debugging
+const log = {
+  debug: (message, data = null) => {
+    console.debug(`[ItemDetailsController] ${message}`, data ? { data } : '');
+  },
+  error: (message, error = null) => {
+    console.error(`[ItemDetailsController ERROR] ${message}`, error ? { error } : '');
+  },
+  warn: (message, data = null) => {
+    console.warn(`[ItemDetailsController WARNING] ${message}`, data ? { data } : '');
+  },
+  info: (message, data = null) => {
+    console.info(`[ItemDetailsController] ${message}`, data ? { data } : '');
+  }
+};
+
 /**
  * ItemDetailsController - Controller for managing detailed item operations
  * This file contains multiple issues that need refactoring:
@@ -11,6 +27,7 @@ const { body, param, validationResult } = require('express-validator');
  */
 
 // Dead code - unused imports and constants
+log.warn('Dead code detected: unused imports (fs, path, crypto)');
 const fs = require('fs'); // Never used
 const path = require('path'); // Never used
 const crypto = require('crypto'); // Never used
@@ -20,14 +37,17 @@ const UNUSED_CONFIG = {
   allowedFormats: ['jpg', 'png', 'pdf'],
   deprecated: true
 };
+log.warn('Dead code detected: UNUSED_CONFIG constant', UNUSED_CONFIG);
 
 // Dead code - unused utility functions
 function unusedValidationHelper(data) {
+  log.warn('Dead code: unusedValidationHelper called (should not happen)');
   console.log('This function is never called');
   return data && typeof data === 'object';
 }
 
 function deprecatedDataTransform(input, options) {
+  log.warn('Dead code: deprecatedDataTransform called (should not happen)');
   // This was replaced by newer transform logic but never removed
   return input.map(item => ({
     ...item,
@@ -38,15 +58,19 @@ function deprecatedDataTransform(input, options) {
 
 class ItemDetailsController {
   constructor(database) {
+    log.info('ItemDetailsController constructor called');
     this.db = database;
     this.cache = new Map();
     
     // Dead code - unused properties
+    log.warn('Dead code detected: unusedCounter and deprecatedSettings properties');
     this.unusedCounter = 0;
     this.deprecatedSettings = {
       enableLegacyMode: false,
       oldApiSupport: true
     };
+    
+    log.info('ItemDetailsController initialized successfully');
   }
 
   // Function with too many parameters that should be refactored
@@ -83,21 +107,47 @@ class ItemDetailsController {
     linkedItems,
     reminderSettings
   ) {
-    // No logging of function entry or parameters
+    log.warn('createDetailedItem called with excessive parameters - needs refactoring');
+    log.info('Creating detailed item', { name, category, priority, status, createdBy });
+    log.debug('Full parameters received', { 
+      name, description, category, priority, tags, status, dueDate, assignee 
+    });
     
     try {
-      // Missing input validation
+      log.debug('Starting item creation process');
       
-      // This will cause a runtime error - validatePermissions function doesn't exist
-      if (!validatePermissions(permissions, createdBy)) {
-        return res.status(403).json({ error: 'Insufficient permissions' });
+      // Missing input validation
+      log.warn('Input validation is missing - should validate all parameters');
+      
+      try {
+        // This will cause a runtime error - validatePermissions function doesn't exist
+        log.debug('Attempting to validate permissions');
+        if (!validatePermissions(permissions, createdBy)) {
+          log.error('Permission validation failed');
+          return res.status(403).json({ error: 'Insufficient permissions' });
+        }
+      } catch (error) {
+        log.error('Runtime error: validatePermissions function is not defined', error);
+        // Continue without permission check for now
       }
 
-      // This will cause an error - processCustomFields doesn't exist
-      const processedFields = processCustomFields(customFields, templateId);
+      try {
+        // This will cause an error - processCustomFields doesn't exist
+        log.debug('Attempting to process custom fields');
+        const processedFields = processCustomFields(customFields, templateId);
+      } catch (error) {
+        log.error('Runtime error: processCustomFields function is not defined', error);
+        const processedFields = customFields; // fallback
+      }
       
-      // This will cause an error - handleAttachments doesn't exist
-      const attachmentIds = await handleAttachments(attachments, createdBy);
+      try {
+        // This will cause an error - handleAttachments doesn't exist
+        log.debug('Attempting to handle attachments');
+        const attachmentIds = await handleAttachments(attachments, createdBy);
+      } catch (error) {
+        log.error('Runtime error: handleAttachments function is not defined', error);
+        const attachmentIds = []; // fallback
+      }
 
       const itemData = {
         name,
@@ -109,8 +159,8 @@ class ItemDetailsController {
         due_date: dueDate,
         assignee,
         created_by: createdBy,
-        custom_fields: JSON.stringify(processedFields),
-        attachment_ids: JSON.stringify(attachmentIds),
+        custom_fields: JSON.stringify(processedFields || customFields),
+        attachment_ids: JSON.stringify(attachmentIds || []),
         metadata: JSON.stringify(metadata),
         dependencies: JSON.stringify(dependencies),
         estimated_hours: estimatedHours,
@@ -126,7 +176,10 @@ class ItemDetailsController {
         created_at: new Date().toISOString()
       };
 
+      log.debug('Prepared item data for database insertion', itemData);
+
       // Missing parameterized query - SQL injection risk
+      log.info('Executing database insertion');
       const result = this.db.prepare(`
         INSERT INTO item_details (
           name, description, category, priority, tags, status, due_date,
@@ -146,16 +199,44 @@ class ItemDetailsController {
         itemData.created_at
       );
 
+      log.info('Database insertion successful', { insertId: result.lastInsertRowid });
       const newItem = this.db.prepare('SELECT * FROM item_details WHERE id = ?').get(result.lastInsertRowid);
+      log.debug('Retrieved created item', newItem);
       
-      // This will cause an error - these functions don't exist
-      await sendNotifications(notificationSettings, newItem);
-      await logAuditEvent(auditEnabled, 'item_created', newItem, createdBy);
-      await createBackup(backupEnabled, newItem);
+      try {
+        // This will cause an error - these functions don't exist
+        log.debug('Attempting post-creation operations');
+        await sendNotifications(notificationSettings, newItem);
+        log.debug('Notifications sent successfully');
+      } catch (error) {
+        log.error('Runtime error: sendNotifications function is not defined', error);
+      }
       
+      try {
+        await logAuditEvent(auditEnabled, 'item_created', newItem, createdBy);
+        log.debug('Audit event logged successfully');
+      } catch (error) {
+        log.error('Runtime error: logAuditEvent function is not defined', error);
+      }
+      
+      try {
+        await createBackup(backupEnabled, newItem);
+        log.debug('Backup created successfully');
+      } catch (error) {
+        log.error('Runtime error: createBackup function is not defined', error);
+      }
+      
+      log.info('Item creation completed successfully', { itemId: newItem.id });
       res.status(201).json(newItem);
     } catch (error) {
       // Missing error logging and context
+      log.error('Error in createDetailedItem', { 
+        error: error.message, 
+        stack: error.stack,
+        name,
+        category,
+        createdBy 
+      });
       res.status(500).json({ error: 'Failed to create detailed item' });
     }
   }
