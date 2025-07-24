@@ -1,0 +1,195 @@
+{
+  "total": {
+    "lines": {
+      "total": 202,
+      "covered": 184,
+      "skipped": 0,
+      "pct": 91.09
+    },
+    "functions": {
+      "total": 17,
+      "covered": 15,
+      "skipped": 0,
+      "pct": 88.24
+    },
+    "statements": {
+      "total": 147,
+      "covered": 134,
+      "skipped": 0,
+      "pct": 91.16
+    },
+    "branches": {
+      "total": 46,
+      "covered": 32,
+      "skipped": 0,
+      "pct": 69.57
+    }
+  },
+  "packages": {
+    "backend": {
+      "lines": {
+        "total": 102,
+        "covered": 102,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 4,
+        "covered": 4,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 102,
+        "covered": 102,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 24,
+        "covered": 24,
+        "skipped": 0,
+        "pct": 100
+      },
+      "tests": {
+        "total": 25,
+        "passed": 25,
+        "failed": 0,
+        "skipped": 0
+      },
+      "files": [
+        {
+          "path": "packages/backend/src/app.js",
+          "lines": {
+            "total": 102,
+            "covered": 102,
+            "pct": 100
+          },
+          "functions": {
+            "total": 4,
+            "covered": 4,
+            "pct": 100
+          },
+          "statements": {
+            "total": 102,
+            "covered": 102,
+            "pct": 100
+          },
+          "branches": {
+            "total": 24,
+            "covered": 24,
+            "pct": 100
+          }
+        }
+      ]
+    },
+    "frontend": {
+      "lines": {
+        "total": 100,
+        "covered": 82,
+        "skipped": 0,
+        "pct": 82.0
+      },
+      "functions": {
+        "total": 13,
+        "covered": 11,
+        "skipped": 0,
+        "pct": 84.62
+      },
+      "statements": {
+        "total": 45,
+        "covered": 32,
+        "skipped": 0,
+        "pct": 71.11
+      },
+      "branches": {
+        "total": 22,
+        "covered": 8,
+        "skipped": 0,
+        "pct": 36.36
+      },
+      "tests": {
+        "total": 36,
+        "passed": 36,
+        "failed": 0,
+        "skipped": 0
+      },
+      "files": [
+        {
+          "path": "packages/frontend/src/App.js",
+          "lines": {
+            "total": 54,
+            "covered": 53,
+            "pct": 98.15,
+            "uncoveredLines": [29]
+          },
+          "functions": {
+            "total": 8,
+            "covered": 8,
+            "pct": 100
+          },
+          "statements": {
+            "total": 45,
+            "covered": 43,
+            "pct": 95.56
+          },
+          "branches": {
+            "total": 8,
+            "covered": 7,
+            "pct": 87.5
+          }
+        },
+        {
+          "path": "packages/frontend/src/testUtils/mockData.js",
+          "lines": {
+            "total": 46,
+            "covered": 29,
+            "pct": 63.04,
+            "uncoveredLines": [91, 96, "101-126"]
+          },
+          "functions": {
+            "total": 5,
+            "covered": 3,
+            "pct": 60.0
+          },
+          "statements": {
+            "total": 32,
+            "covered": 21,
+            "pct": 65.63
+          },
+          "branches": {
+            "total": 14,
+            "covered": 1,
+            "pct": 7.14
+          }
+        }
+      ]
+    }
+  },
+  "summary": {
+    "projectName": "Copilot Bootcamp Agent Mode Basics",
+    "generatedAt": "2025-07-24T12:00:00.000Z",
+    "testSuites": {
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    "testCases": {
+      "total": 61,
+      "passed": 61,
+      "failed": 0,
+      "skipped": 0
+    },
+    "coverage": {
+      "overall": "91.16% statements, 69.57% branches, 88.24% functions, 91.09% lines",
+      "backend": "100% (Perfect Coverage)",
+      "frontend": "71.11% statements (needs improvement in test utilities)"
+    },
+    "recommendations": [
+      "Frontend App.js has excellent coverage (95.56% statements) with only line 29 uncovered",
+      "Test utilities (mockData.js) bring down overall coverage - consider excluding from coverage if not production code",
+      "Add tests for edge cases to improve branch coverage from 69.57% to 90%+",
+      "Consider adding integration tests for end-to-end scenarios"
+    ]
+  }
+}
