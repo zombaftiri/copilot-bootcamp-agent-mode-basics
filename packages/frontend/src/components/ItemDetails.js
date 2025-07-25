@@ -136,24 +136,6 @@ function ItemDetails({
     localStatus 
   });
 
-  // Dead code - unused variables and functions
-  log.warn('Dead code detected: unusedVariable and anotherUnusedVar');
-  const unusedVariable = 'This is never used';
-  const anotherUnusedVar = { data: 'unused', count: 0 };
-  
-  function deadFunction() {
-    log.warn('Dead code: deadFunction called (should not happen)');
-    console.log('This function is never called');
-    return false;
-  }
-  
-  function anotherDeadFunction(param1, param2, param3) {
-    log.warn('Dead code: anotherDeadFunction called (should not happen)', { param1, param2, param3 });
-    // This function exists but is never used
-    const result = param1 + param2 + param3;
-    return result * 2;
-  }
-
   // This useEffect has a bug - missing dependency
   useEffect(() => {
     log.debug('useEffect triggered - missing dependency warning should appear');
@@ -195,23 +177,6 @@ function ItemDetails({
       throw error;
     }
   };
-
-  // This useEffect has a bug - missing dependency
-  useEffect(() => {
-    log.debug('useEffect triggered - missing dependency warning should appear');
-    if (itemId) {
-      log.info('Loading item data for itemId', { itemId });
-      try {
-        // This will cause a runtime error because fetchItemDetails is not defined
-        log.error('Attempting to call undefined function fetchItemDetails');
-        fetchItemDetails(itemId);
-      } catch (error) {
-        log.error('Runtime error: fetchItemDetails is not defined', error);
-      }
-    } else {
-      log.warn('useEffect called without itemId');
-    }
-  }, []);
 
   // Refactored function with object parameter for better maintainability
   const validateAndUpdateItem = (validationData) => {
@@ -356,19 +321,6 @@ function ItemDetails({
       log.error('Error in processItemUpdate', error);
       throw error;
     }
-  };
-
-  // Dead code - unused event handlers
-  const handleUnusedClick = () => {
-    log.warn('Dead code: handleUnusedClick called (should not happen)');
-    console.log('This handler is never attached to any element');
-  };
-
-  const handleAnotherUnusedEvent = (event) => {
-    log.warn('Dead code: handleAnotherUnusedEvent called (should not happen)');
-    event.preventDefault();
-    // More unused code
-    return false;
   };
 
   const handleInputChange = (field, value) => {
